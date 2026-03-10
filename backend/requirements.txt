@@ -1,0 +1,20 @@
+# --- CORE FRAMEWORK ---
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# --- DATABASE & ORM (Dev 1 - Tuấn) ---
+sqlalchemy==2.0.25        # Dùng phiên bản 2.0+ hỗ trợ async cực tốt
+asyncpg==0.29.0           # Driver kết nối PostgreSQL siêu tốc (Async)
+alembic==1.13.1           # Công cụ tạo script migration cho DB
+
+# --- AUTH & SECURITY (Dev 1 & Dev 2) ---
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.6
+
+# --- REAL-TIME (Dev 3 - Hà) ---
+websockets==12.0          # Backend engine cho FastAPI Websocket
+redis==5.0.1              # (Tùy chọn cho Tuần 3-4) Giúp scale Pub/Sub nếu app lớn lên
+

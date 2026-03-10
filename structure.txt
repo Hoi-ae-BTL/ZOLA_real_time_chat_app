@@ -1,0 +1,26 @@
+backend/
+├── app/
+    ├── core/               # (Tuấn & Hưng) File config.py (.env), security.py (JWT)
+    ├── db/                 # (Tuấn) session.py (Kết nối DB async), base.py
+    ├── models/             # (Tuấn) Các class SQLAlchemy: user.py, message.py
+    ├── schemas/            # (Hưng) Các class Pydantic DTO (kiểm tra dữ liệu đầu vào/ra)
+    ├── api/                # (Hưng) RESTful API routers: auth.py, chat.py, users.py
+    ├── websockets/         # (Hà) socket_manager.py (Lưu danh sách online, chia Room)
+    └── main.py             # File chạy gốc, gắn CORS, gắn Routers
+
+frontend/
+├── src/
+│   ├── assets/             #
+│   ├── api/                # Cấu hình axios, các hàm gọi API (auth.api.js, chat.api.js)
+│   ├── components/         #
+│   │   ├── chat/           # ChatBox, MessageBubble, TypingIndicator
+│   │   ├── common/         # Button, Input, Avatar
+│   │   └── layout/         # Sidebar, Navbar
+│   ├── hooks/              # Custom hooks: useChatSocket.js (Hứng logic từ react-use-websocket)
+│   ├── pages/              # Login, Register, MainChat
+│   ├── store/              # zustand store: useAuthStore.js, useChatStore.js
+│   ├── utils/              # formatTime.js, tokenHandler.js
+│   ├── App.jsx             # Gom Router
+│   └── main.jsx            # Điểm neo của React
+├── .env                    # Lưu VITE_API_URL (VD: http://localhost:8000)
+└── package.json
