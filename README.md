@@ -54,7 +54,7 @@ JWT_SECRET_KEY=your_secret_key
 ### Bước 5: Chạy server
 
 ```bash
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 ```
 
 API chạy tại:
