@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
+from typing import List
 
 from backend.app import crud, schemas
 from backend.app.db.base import User, Conversation
@@ -8,13 +9,7 @@ from backend.app.db.base import User, Conversation
 async def create_conversation(
     db: AsyncSession, *, creator: User, conversation_in: schemas.ConversationCreate
 ) -> Conversation:
-    """
-    Handles the business logic for creating a new conversation.
-    - Validates user IDs.
-    - Enforces rules for direct and group conversations.
-    - Prevents duplicate direct conversations.
-    - Creates the conversation and adds participants.
-    """
+    # ... (existing create_conversation logic)
     # 1. Validate that all user IDs from the request exist
     all_user_ids = list(set(conversation_in.user_ids))
     if all_user_ids:  # Only query if there are users to check
@@ -65,24 +60,61 @@ async def create_conversation(
 
 
 async def get_and_validate_conversation(
-    db: AsyncSession, *, conversation_id: str, user: User
+    db: AsyncSession, *, conversation_id: str, user: User, check_admin: bool = False
 ) -> Conversation:
     """
-    Fetches a conversation and validates that the user is a member.
+    Fetches a conversation, validates the user is a member, and optionally checks for admin rights.
     """
     conversation = await crud.crud_conversation.get_conversation_by_id(
         db=db, conversation_id=conversation_id
     )
     if not conversation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found.",
-        )
-
-    # Check if the current user is a participant
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
     if not any(p.id == user.id for p in conversation.participants):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this conversation.",
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not a member of this conversation.")
+    if check_admin and conversation.group_created_by != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have admin rights for this group.")
     return conversation
+
+
+async def update_group_conversation(
+    db: AsyncSession, *, conversation_id: str, conversation_in: schemas.ConversationUpdate, user: User
+) -> Conversation:
+    """Updates a group conversation's details (e.g., name)."""
+    conversation = await get_and_validate_conversation(db=db, conversation_id=conversation_id, user=user, check_admin=True)
+    if conversation.type != "group":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This is not a group conversation.")
+    return await crud.crud_conversation.update_conversation(db=db, conversation=conversation, conversation_in=conversation_in)
+
+
+async def add_members(
+    db: AsyncSession, *, conversation_id: str, member_ids_in: List[str], user: User
+) -> Conversation:
+    """Adds members to a group conversation."""
+    conversation = await get_and_validate_conversation(db=db, conversation_id=conversation_id, user=user, check_admin=True)
+    if conversation.type != "group":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This is not a group conversation.")
+    
+    # TODO: Validate that member_ids_in exist and are not already in the group.
+    
+    return await crud.crud_conversation.add_members_to_conversation(db=db, conversation=conversation, user_ids=member_ids_in)
+
+
+async def remove_member(
+    db: AsyncSession, *, conversation_id: str, member_id_to_remove: str, current_user: User
+):
+    """Removes a member from a group or allows a user to leave."""
+    conversation = await get_and_validate_conversation(db=db, conversation_id=conversation_id, user=current_user)
+    if conversation.type != "group":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This is not a group conversation.")
+
+    is_admin = conversation.group_created_by == current_user.id
+    is_self_removal = member_id_to_remove == current_user.id
+
+    if not is_admin and not is_self_removal:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only remove yourself from the group.")
+    
+    # TODO: Check if the member_id_to_remove is actually in the group.
+    
+    await crud.crud_conversation.remove_member_from_conversation(db=db, conversation_id=conversation_id, user_id=member_id_to_remove)
+    return

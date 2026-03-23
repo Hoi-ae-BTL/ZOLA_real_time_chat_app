@@ -5,8 +5,8 @@ from sqlalchemy import and_, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.db.base import Conversation, ConversationParticipant, User
-from app.schemas.conversation import ConversationCreate, ConversationUpdate
+from backend.app.db.base import Conversation, ConversationParticipant, User
+from backend.app.schemas.conversation import ConversationCreate, ConversationUpdate
 
 
 async def create_conversation(
