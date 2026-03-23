@@ -67,6 +67,7 @@ class User(Base):
     seen_conversations : Mapped[List["Conversation"]] = relationship("Conversation", secondary="ConversationSeenBy",      back_populates="seen_by")
 
     sent_messages : Mapped[List["Message"]] = relationship("Message", foreign_keys="Message.sender_id", back_populates="sender", cascade="all, delete-orphan")
+    sessions      : Mapped[List["Session"]] = relationship("Session", back_populates="user", cascade="all, delete-orphan")
 
 
 # ---------------------------------------------------------------------------
@@ -216,3 +217,20 @@ class Message(Base):
         Index("idx_message_conversation", "conversationId", "createdAt"),
         Index("idx_message_sender",       "senderId"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Session (Quản lý Refresh Token)
+# ---------------------------------------------------------------------------
+
+class Session(Base):
+    __tablename__ = "Session"
+
+    id            : Mapped[str]      = mapped_column(Text, primary_key=True, server_default=func.gen_random_uuid().cast(Text))
+    user_id       : Mapped[str]      = mapped_column("userId", ForeignKey("User.id", ondelete="CASCADE"), nullable=False)
+    refresh_token : Mapped[str]      = mapped_column("refreshToken", Text, unique=True, nullable=False)
+    expires_at    : Mapped[datetime] = mapped_column("expiresAt", DateTime(timezone=True), nullable=False)
+    created_at    : Mapped[datetime] = mapped_column("createdAt", DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    user : Mapped["User"] = relationship("User", back_populates="sessions")

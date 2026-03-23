@@ -26,5 +26,11 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: str
     created_at: datetime
-    update_at: datetime
+    updated_at: datetime #fix typo
     model_config = ConfigDict(from_attributes=True)
+
+# define the tokens that backend will return to the front end
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
