@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -21,21 +21,21 @@ async def create_conversation(
     # 1. Create Conversation object
     db_conversation = Conversation(
         type=conversation_in.type,
-        group_name=conversation_in.group_name if conversation_in.type == "group" else None,
+        group_name=conversation_in.group_name
+        if conversation_in.type == "group"
+        else None,
         group_created_by=creator_id if conversation_in.type == "group" else None,
     )
     db.add(db_conversation)
     await db.flush()  # Flush to get the conversation ID
 
     # 2. Create ConversationParticipant objects
-    participant_ids = set(conversation_in.participant_ids)
-    participant_ids.add(creator_id)  # Creator is also a participant
+    user_ids = set(conversation_in.user_ids)
+    user_ids.add(creator_id)  # Creator is also a participant
 
     participants = [
-        ConversationParticipant(
-            user_id=user_id, conversation_id=db_conversation.id
-        )
-        for user_id in participant_ids
+        ConversationParticipant(user_id=user_id, conversation_id=db_conversation.id)
+        for user_id in user_ids
     ]
     db.add_all(participants)
 
@@ -87,3 +87,27 @@ async def get_user_conversations(
     )
     result = await db.execute(statement)
     return result.scalars().all()
+
+
+async def get_direct_conversation_by_users(
+    db: AsyncSession, *, user1_id: str, user2_id: str
+) -> Optional[Conversation]:
+    """
+    Finds a direct conversation that involves exactly two specific users.
+    """
+    statement = (
+        select(Conversation)
+        .join(ConversationParticipant, Conversation.id == ConversationParticipant.conversation_id)
+        .where(Conversation.type == "direct")
+        .group_by(Conversation.id)
+        .having(
+            and_(
+                func.count(ConversationParticipant.user_id) == 2,
+                func.bool_or(ConversationParticipant.user_id == user1_id),
+                func.bool_or(ConversationParticipant.user_id == user2_id),
+            )
+        )
+        .options(joinedload(Conversation.participants))
+    )
+    result = await db.execute(statement)
+    return result.scalar_one_or_none()

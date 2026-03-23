@@ -1,3 +1,4 @@
+from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from backend.app.db.base import User
@@ -10,6 +11,15 @@ async def get_user(db: AsyncSession, user_id: str) -> User | None:
     Get a user by their ID.
     """
     return await db.get(User, user_id)
+
+
+async def get_users_by_ids(db: AsyncSession, user_ids: List[str]) -> List[User]:
+    """
+    Get a list of users by their IDs.
+    """
+    stmt = select(User).where(User.id.in_(user_ids))
+    result = await db.execute(stmt)
+    return result.scalars().all()
 
 
 async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
