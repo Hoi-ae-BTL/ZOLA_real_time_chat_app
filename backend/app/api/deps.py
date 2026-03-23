@@ -5,7 +5,8 @@ from jose import jwt, JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import ValidationError
 
-from backend.app import crud, schemas
+from backend.app.crud import crud_user
+from backend.app.schemas.token import TokenPayload
 from backend.app.core import security
 from backend.app.db.base import User
 from backend.app.db.session import async_session
@@ -33,13 +34,13 @@ async def get_current_user(
         payload = jwt.decode(
             token, security.SECRET_KEY, algorithms=[security.ALGORITHM]
         )
-        token_data = schemas.TokenPayload(**payload)
+        token_data = TokenPayload(**payload)
     except (JWTError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    user = await crud.get_user(db, user_id=token_data.sub)
+    user = await crud_user.get_user(db, user_id=token_data.sub)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
