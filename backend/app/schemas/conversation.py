@@ -23,7 +23,7 @@ class ParticipantResponse(BaseModel):
 # Create new group
 class ConversationCreate(ConversationBase):
     # Khi tạo hội thoại, Frontend cần gửi lên danh sách những người tham gia
-    participant_ids: List[str] = Field(..., min_length=1)
+    user_ids: List[str] = Field(..., min_length=1)
 
 class ConversationUpdate(BaseModel):
     group_name: Optional[str] = Field(None, max_length=255)
