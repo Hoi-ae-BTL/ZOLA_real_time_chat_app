@@ -1,12 +1,17 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
-from backend.app import crud, schemas, services
+from backend.app.services import conversation_service
+from backend.app.crud import crud_message
+from backend.app.schemas.message import (
+    MessageCreate,
+
+)
 from backend.app.db.base import User, Message, Conversation
 
 
 async def create_message(
-    db: AsyncSession, *, message_in: schemas.MessageCreate, sender: User
+    db: AsyncSession, *, message_in: MessageCreate, sender: User
 ) -> Message:
     """
     Handles the business logic for sending a message.
@@ -15,12 +20,12 @@ async def create_message(
     3. Updates the conversation's last message fields.
     """
     # 1. Validate user is a member of the conversation
-    conversation = await services.conversation_service.get_and_validate_conversation(
+    conversation = await conversation_service.get_and_validate_conversation(
         db=db, conversation_id=message_in.conversation_id, user=sender
     )
 
     # 2. Create the message
-    message = await crud.crud_message.create_message(
+    message = await crud_message.create_message(
         db=db, message_in=message_in, sender_id=sender.id
     )
 
@@ -44,12 +49,12 @@ async def get_messages_for_conversation(
     2. Fetches the messages.
     """
     # 1. Validate user is a member of the conversation
-    await services.conversation_service.get_and_validate_conversation(
+    await conversation_service.get_and_validate_conversation(
         db=db, conversation_id=conversation_id, user=user
     )
 
     # 2. Fetch messages
-    messages = await crud.crud_message.get_messages_by_conversation(
+    messages = await crud_message.get_messages_by_conversation(
         db=db, conversation_id=conversation_id, skip=skip, limit=limit
     )
     return messages

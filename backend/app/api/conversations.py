@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from backend.app import services
+from backend.app.services import conversation_service
 from backend.app.api import deps
 from backend.app.db.base import User
 from backend.app.crud import crud_conversation
@@ -26,7 +26,7 @@ async def create_conversation(
     conversation_in: ConversationCreate,
 ):
     """Create a new conversation (direct or group)."""
-    conversation = await services.conversation_service.create_conversation(
+    conversation = await conversation_service.create_conversation(
         db=db, creator=current_user, conversation_in=conversation_in
     )
     return conversation
@@ -51,7 +51,7 @@ async def get_conversation_details(
     conversation_id: str,
 ):
     """Get detailed information about a single conversation."""
-    conversation = await services.conversation_service.get_and_validate_conversation(
+    conversation = await conversation_service.get_and_validate_conversation(
         db=db, conversation_id=conversation_id, user=current_user
     )
     return conversation
@@ -66,7 +66,7 @@ async def update_group_conversation(
     conversation_in: ConversationUpdate,
 ):
     """Update a group conversation's details (e.g., name). Only for group admins."""
-    conversation = await services.conversation_service.update_group_conversation(
+    conversation = await conversation_service.update_group_conversation(
         db=db, conversation_id=conversation_id, conversation_in=conversation_in, user=current_user
     )
     return conversation
@@ -81,7 +81,7 @@ async def add_conversation_members(
     members_in: AddMemberRequest,
 ):
     """Add members to a group conversation. Only for group admins."""
-    conversation = await services.conversation_service.add_members(
+    conversation = await conversation_service.add_members(
         db=db, conversation_id=conversation_id, member_ids_in=members_in.user_ids, user=current_user
     )
     return conversation
@@ -96,7 +96,7 @@ async def remove_conversation_member(
     member_to_remove: RemoveMemberRequest,
 ):
     """Remove a member from a group (admin) or leave a group (member)."""
-    await services.conversation_service.remove_member(
+    await conversation_service.remove_member(
         db=db,
         conversation_id=conversation_id,
         member_id_to_remove=member_to_remove.user_id,

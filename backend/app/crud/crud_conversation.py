@@ -1,5 +1,5 @@
 from typing import List, Optional
-from uuid import UUID
+from sqlalchemy.orm import selectinload
 
 from sqlalchemy import and_, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,35 +31,37 @@ async def create_conversation(
         for user_id in user_ids
     ]
     db.add_all(participants)
-
     await db.commit()
-    await db.refresh(db_conversation, ["participants", "group_creator"])
-    return db_conversation
+
+    return await get_conversation_by_id(db, conversation_id=db_conversation.id)
 
 
 async def get_conversation_by_id(
     db: AsyncSession, *, conversation_id: str
 ) -> Optional[Conversation]:
-    """Gets a single conversation by its ID, loading participants."""
     statement = (
         select(Conversation)
         .where(Conversation.id == conversation_id)
-        .options(joinedload(Conversation.participants), joinedload(Conversation.group_creator))
+        .options(
+            selectinload(Conversation.participants),
+            joinedload(Conversation.group_creator),
+            selectinload(Conversation.seen_by),
+        )
     )
     result = await db.execute(statement)
     return result.scalar_one_or_none()
 
 
 async def get_user_conversations(db: AsyncSession, *, user_id: str) -> List[Conversation]:
-    """Gets all conversations for a given user."""
     statement = (
         select(Conversation)
         .join(Conversation.participants)
         .where(User.id == user_id)
         .order_by(Conversation.updated_at.desc())
         .options(
-            joinedload(Conversation.participants),
+            selectinload(Conversation.participants),
             joinedload(Conversation.last_message_sender_rel),
+            selectinload(Conversation.seen_by),
         )
     )
     result = await db.execute(statement)
@@ -69,7 +71,6 @@ async def get_user_conversations(db: AsyncSession, *, user_id: str) -> List[Conv
 async def get_direct_conversation_by_users(
     db: AsyncSession, *, user1_id: str, user2_id: str
 ) -> Optional[Conversation]:
-    """Finds a direct conversation that involves exactly two specific users."""
     statement = (
         select(Conversation)
         .join(ConversationParticipant, Conversation.id == ConversationParticipant.conversation_id)
@@ -82,7 +83,10 @@ async def get_direct_conversation_by_users(
                 func.bool_or(ConversationParticipant.user_id == user2_id),
             )
         )
-        .options(joinedload(Conversation.participants))
+        .options(
+            selectinload(Conversation.participants),
+            selectinload(Conversation.seen_by),  # 🔥 thêm dòng này
+        )
     )
     result = await db.execute(statement)
     return result.scalar_one_or_none()
@@ -98,8 +102,7 @@ async def add_members_to_conversation(
     ]
     db.add_all(new_participants)
     await db.commit()
-    await db.refresh(conversation, ["participants"])
-    return conversation
+    return await get_conversation_by_id(db, conversation_id=conversation.id)
 
 
 async def remove_member_from_conversation(
@@ -125,5 +128,4 @@ async def update_conversation(
         setattr(conversation, field, value)
     db.add(conversation)
     await db.commit()
-    await db.refresh(conversation)
-    return conversation
+    return await get_conversation_by_id(db, conversation_id=conversation.id)

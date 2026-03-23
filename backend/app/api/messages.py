@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from backend.app import services
+from backend.app.services import message_service
 from backend.app.api import deps
 from backend.app.db.base import User
 from backend.app.schemas.message import (
@@ -26,7 +26,7 @@ async def send_message(
     - The `sender_id` is automatically determined from the authentication token.
     - Business logic is handled by the message service.
     """
-    message = await services.message_service.create_message(
+    message = await message_service.create_message(
         db=db, message_in=message_in, sender=current_user
     )
     return message
@@ -47,7 +47,7 @@ async def get_chat_history(
     - Implements pagination with `skip` and `limit`.
     - Business logic is handled by the message service.
     """
-    messages = await services.message_service.get_messages_for_conversation(
+    messages = await message_service.get_messages_for_conversation(
         db=db,
         conversation_id=conversation_id,
         user=current_user,

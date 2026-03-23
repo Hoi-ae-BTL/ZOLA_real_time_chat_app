@@ -2,18 +2,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from typing import List
 
-from backend.app import crud, schemas
-from backend.app.db.base import User, Conversation
+from backend.app.crud import (
+    crud_user,
+    crud_conversation
+)
+from backend.app.schemas.conversation import (
+    ConversationCreate,
+    ConversationUpdate
+)
+from backend.app.db.base import User, Conversation, ConversationType  # Import the correct Enum
 
 
 async def create_conversation(
-    db: AsyncSession, *, creator: User, conversation_in: schemas.ConversationCreate
+    db: AsyncSession, *, creator: User, conversation_in: ConversationCreate
 ) -> Conversation:
     # ... (existing create_conversation logic)
     # 1. Validate that all user IDs from the request exist
     all_user_ids = list(set(conversation_in.user_ids))
     if all_user_ids:  # Only query if there are users to check
-        users = await crud.crud_user.get_users_by_ids(db, user_ids=all_user_ids)
+        users = await crud_user.get_users_by_ids(db, user_ids=all_user_ids)
         if len(users) != len(all_user_ids):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -34,7 +41,7 @@ async def create_conversation(
                 detail="You cannot create a direct conversation with yourself.",
             )
         # Check for and return existing direct conversation
-        existing_conversation = await crud.crud_conversation.get_direct_conversation_by_users(
+        existing_conversation = await crud_conversation.get_direct_conversation_by_users(
             db=db, user1_id=creator.id, user2_id=other_user_id
         )
         if existing_conversation:
@@ -53,7 +60,7 @@ async def create_conversation(
             )
 
     # 3. If all checks pass, create the conversation
-    conversation = await crud.crud_conversation.create_conversation(
+    conversation = await crud_conversation.create_conversation(
         db=db, conversation_in=conversation_in, creator_id=creator.id
     )
     return conversation
@@ -65,7 +72,7 @@ async def get_and_validate_conversation(
     """
     Fetches a conversation, validates the user is a member, and optionally checks for admin rights.
     """
-    conversation = await crud.crud_conversation.get_conversation_by_id(
+    conversation = await crud_conversation.get_conversation_by_id(
         db=db, conversation_id=conversation_id
     )
     if not conversation:
@@ -78,13 +85,13 @@ async def get_and_validate_conversation(
 
 
 async def update_group_conversation(
-    db: AsyncSession, *, conversation_id: str, conversation_in: schemas.ConversationUpdate, user: User
+    db: AsyncSession, *, conversation_id: str, conversation_in: ConversationUpdate, user: User
 ) -> Conversation:
     """Updates a group conversation's details (e.g., name)."""
     conversation = await get_and_validate_conversation(db=db, conversation_id=conversation_id, user=user, check_admin=True)
-    if conversation.type != "group":
+    if conversation.type != ConversationType.group:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This is not a group conversation.")
-    return await crud.crud_conversation.update_conversation(db=db, conversation=conversation, conversation_in=conversation_in)
+    return await crud_conversation.update_conversation(db=db, conversation=conversation, conversation_in=conversation_in)
 
 
 async def add_members(
@@ -92,12 +99,12 @@ async def add_members(
 ) -> Conversation:
     """Adds members to a group conversation."""
     conversation = await get_and_validate_conversation(db=db, conversation_id=conversation_id, user=user, check_admin=True)
-    if conversation.type != "group":
+    if conversation.type != ConversationType.group:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This is not a group conversation.")
     
     # TODO: Validate that member_ids_in exist and are not already in the group.
     
-    return await crud.crud_conversation.add_members_to_conversation(db=db, conversation=conversation, user_ids=member_ids_in)
+    return await crud_conversation.add_members_to_conversation(db=db, conversation=conversation, user_ids=member_ids_in)
 
 
 async def remove_member(
@@ -105,7 +112,7 @@ async def remove_member(
 ):
     """Removes a member from a group or allows a user to leave."""
     conversation = await get_and_validate_conversation(db=db, conversation_id=conversation_id, user=current_user)
-    if conversation.type != "group":
+    if conversation.type != ConversationType.group:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This is not a group conversation.")
 
     is_admin = conversation.group_created_by == current_user.id
@@ -116,5 +123,5 @@ async def remove_member(
     
     # TODO: Check if the member_id_to_remove is actually in the group.
     
-    await crud.crud_conversation.remove_member_from_conversation(db=db, conversation_id=conversation_id, user_id=member_id_to_remove)
+    await crud_conversation.remove_member_from_conversation(db=db, conversation_id=conversation_id, user_id=member_id_to_remove)
     return
