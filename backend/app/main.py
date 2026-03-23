@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # 1. Import các Router từ thư mục app/api/
+from backend.app.api.auth import router as auth_router
 from backend.app.api.users import router as user_router
 from backend.app.api.friends import router as friend_router
 from backend.app.api.conversations import router as conv_router
@@ -37,6 +38,7 @@ app.add_middleware(
 # ---------------------------------------------------------
 # 4. LẮP RÁP CÁC MODULE API TĨNH (Phần việc của Hưng)
 # ---------------------------------------------------------
+app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(friend_router)
 app.include_router(conv_router)

@@ -33,7 +33,7 @@ async def register_user(data: UserCreate, db: AsyncSession = Depends(get_db)):
     if data.email and await get_user_by_email(db, email=data.email):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email đã tồn tại")
         
-    # Bước 2: Tạo user mới và trả về object (FastAPI tự động ép kiểu sang UserResponse)
+    # Bgước 2: Tạo user mới và trả về object (FastAPI tự động ép kiểu san UserResponse)
     new_user = await create_user(db, obj_in=data)
     return new_user
 
