@@ -1,14 +1,12 @@
+// src/api/apiClient.js
 import axios from 'axios';
 
 const apiClient = axios.create({
-    baseURL: 'http://localhost:8000', // Trỏ thẳng vào server FastAPI của Hưng
+    baseURL: 'http://localhost:8000',
     timeout: 10000,
-    headers: {
-        'Content-Type': 'application/json',
-    }
+    headers: { 'Content-Type': 'application/json' }
 });
 
-// Kẻ đánh chặn: Tự động nhét Token vào Header trước khi gửi đi
 apiClient.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('access_token');
@@ -20,14 +18,16 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Kẻ đánh chặn: Xử lý lỗi tập trung khi Server trả về
 apiClient.interceptors.response.use(
-    (response) => response.data,
+    (response) => response, // Luôn trả về response đầy đủ
     (error) => {
         if (error.response?.status === 401) {
-            console.error("Hết hạn đăng nhập!");
+            console.error("Token không hợp lệ hoặc đã hết hạn. Đang đăng xuất...");
             localStorage.removeItem('access_token');
-            // Sau này Thế có thể redirect về /login ở đây
+            // Dùng window.location để đảm bảo trang được tải lại hoàn toàn
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

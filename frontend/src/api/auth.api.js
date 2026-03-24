@@ -1,43 +1,33 @@
+// src/api/auth.api.js
 import apiClient from './apiClient';
 
-/**
- * Hàm gọi API Đăng nhập
- * LƯU Ý: FastAPI OAuth2 yêu cầu gửi dạng URLSearchParams (Form Data), không phải JSON!
- */
-export const loginAPI = async (email, password) => {
-    // Ép dữ liệu thành dạng Form Data
-    const formData = new URLSearchParams();
-    formData.append('username', email); // FastAPI bắt buộc key này tên là 'username'
-    formData.append('password', password);
-
-    // Gửi request
-    const response = await apiClient.post('/api/auth/login', formData, {
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
-    });
-    return response;
-};
-
-/**
- * Hàm gọi API Đăng ký
- * Cái này thì gửi JSON bình thường theo đúng Schema UserCreate của Hưng
- */
-export const registerAPI = async (email, username, display_name, password) => {
-    const payload = {
-        email: email,
-        username: username,
-        display_name: display_name,
-        password: password
+export const registerAPI = (email, username, displayName, password) => {
+    const data = {
+        email,
+        username,
+        display_name: displayName,
+        password
     };
-    const response = await apiClient.post('/api/users/register', payload);
-    return response;
+    return apiClient.post('/api/users/register', data);
 };
 
-/**
- * Hàm gọi API lấy thông tin Profile của chính mình (dựa vào Token)
- */
-export const getMyProfileAPI = async () => {
-    const response = await apiClient.get('/api/users/me');
-    return response;
+export const loginAPI = async (username, password) => {
+    const params = new URLSearchParams();
+    params.append('username', username);
+    params.append('password', password);
+
+    const response = await apiClient.post('/api/auth/login', params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+
+    if (response.data && response.data.access_token) {
+        localStorage.setItem('access_token', response.data.access_token);
+    } else {
+        throw new Error("Dữ liệu trả về không hợp lệ (không tìm thấy access_token).");
+    }
+};
+
+export const logoutAPI = () => {
+    localStorage.removeItem('access_token');
+    window.location.href = '/login';
 };

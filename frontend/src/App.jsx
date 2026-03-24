@@ -1,22 +1,21 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+// src/App.jsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ChatPage from './pages/ChatPage';
+import PrivateRoute from './components/PrivateRoute';
 
 function App() {
-  // Logic tạm: Cứ có token trong máy là coi như đã đăng nhập
-  const isAuthenticated = !!localStorage.getItem('access_token');
-
   return (
     <BrowserRouter>
       <Routes>
-        {/* Route bảo vệ: Chưa login thì cút ra trang /login */}
-        <Route
-          path="/"
-          element={isAuthenticated ? <ChatPage /> : <Navigate to="/login" />}
-        />
+        {/* Route được bảo vệ */}
+        <Route element={<PrivateRoute />}>
+          <Route path="/" element={<ChatPage />} />
+          {/* Thêm các route cần bảo vệ khác vào đây */}
+        </Route>
 
-        {/* Route tự do */}
+        {/* Route công khai */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
       </Routes>
