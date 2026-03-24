@@ -11,7 +11,8 @@ from backend.app.schemas.user import UserCreate, UserResponse, UserUpdate
 from backend.app.crud.crud_user import get_user_by_username, get_user_by_email, create_user
 from backend.app.core.security import get_password_hash
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.api.deps import get_db
+from backend.app.api.deps import get_db, get_current_user
+from backend.app.db.base import User
 
 # Tạo nhóm API Tài khoản
 router = APIRouter(prefix="/api/users", tags=["Users & Auth (Tài khoản)"])
@@ -39,13 +40,13 @@ async def register_user(data: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_my_profile():
+async def get_my_profile(current_user: User = Depends(get_current_user)):
     """
     **API Lấy thông tin cá nhân của chính mình**
 
     - API này cần Token đăng nhập. Lấy data dựa trên người đang cầm Token.
     """
-    pass
+    return current_user
 
 
 @router.put("/me", response_model=UserResponse)

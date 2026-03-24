@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/conversations", tags=["Conversations (Nhắn tin
 async def create_conversation(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_user),
     conversation_in: ConversationCreate,
 ):
     """Create a new conversation (direct or group)."""
@@ -36,7 +36,7 @@ async def create_conversation(
 async def get_user_conversations(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_user),
 ):
     """Get all conversations for the current user."""
     conversations = await crud_conversation.get_user_conversations(db=db, user_id=current_user.id)
@@ -47,7 +47,7 @@ async def get_user_conversations(
 async def get_conversation_details(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_user),
     conversation_id: str,
 ):
     """Get detailed information about a single conversation."""
@@ -61,7 +61,7 @@ async def get_conversation_details(
 async def update_group_conversation(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_user),
     conversation_id: str,
     conversation_in: ConversationUpdate,
 ):
@@ -76,7 +76,7 @@ async def update_group_conversation(
 async def add_conversation_members(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_user),
     conversation_id: str,
     members_in: AddMemberRequest,
 ):
@@ -91,7 +91,7 @@ async def add_conversation_members(
 async def remove_conversation_member(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_user),
     conversation_id: str,
     member_to_remove: RemoveMemberRequest,
 ):

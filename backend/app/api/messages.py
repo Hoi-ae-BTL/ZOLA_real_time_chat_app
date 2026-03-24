@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/messages", tags=["Messages (Tin nhắn)"])
 async def send_message(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_user),
     message_in: MessageCreate,
 ):
     """
@@ -36,7 +36,7 @@ async def send_message(
 async def get_chat_history(
     *,
     db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_user),
     conversation_id: str,
     skip: int = Query(0, ge=0, description="Number of messages to skip"),
     limit: int = Query(100, ge=1, le=200, description="Number of messages to return"),
