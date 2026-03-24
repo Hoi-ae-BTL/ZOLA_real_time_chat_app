@@ -1,12 +1,55 @@
 backend/
-├── app/
-    ├── core/               # (Tuấn & Hưng) File config.py (.env), security.py (JWT)
-    ├── db/                 # (Tuấn) session.py (Kết nối DB async), base.py
-    ├── models/             # (Tuấn) Các class SQLAlchemy: user.py, message.py
-    ├── schemas/            # (Hưng) Các class Pydantic DTO (kiểm tra dữ liệu đầu vào/ra)
-    ├── api/                # (Hưng) RESTful API routers: auth.py, chat.py, users.py
-    ├── websockets/         # (Hà) socket_manager.py (Lưu danh sách online, chia Room)
-    └── main.py             # File chạy gốc, gắn CORS, gắn Routers
+├── alembic/                # (Tuấn) Thư mục tự động sinh ra bởi Alembic để quản lý version DB
+├── venv/                   # Môi trường ảo (Không push lên Git)
+├── alembic.ini             # File cấu hình của Alembic
+├── requirements.txt        # Danh sách thư viện
+├── .env                    # File biến môi trường (Database URL, JWT Secret...)
+├── .gitignore              # Chặn push file rác
+├── main.py                 # (Chung) File gốc khởi chạy Uvicorn server, nhúng API và Socket
+│
+└── app/                    # 📦 NƠI CHỨA TOÀN BỘ CODE CỦA DỰ ÁN
+    │
+    ├── core/               # Lõi cấu hình hệ thống
+    │   ├── config.py       # (Tuấn) Load biến từ file .env
+    │   └── security.py     # (Tuấn/Hưng) Hàm băm mật khẩu, tạo và giải mã JWT
+    │
+    ├── db/                 # Kết nối CSDL
+    │   ├── base.py         # (Tuấn) Nơi gom các Models lại cho Alembic đọc
+    │   └── session.py      # (Tuấn) Khởi tạo kết nối PostgreSQL Async
+    │
+    ├── models/             # (Tuấn) Cấu trúc bảng SQL
+    │   ├── user.py         # Bảng Users
+    │   ├── conversation.py # Bảng Conversations, ConversationMembers
+    │   └── message.py      # Bảng Messages
+    │   └── ...
+    │
+    ├── schemas/            # (Hưng) Data Transfer Objects (Pydantic)
+    │   ├── user.py         # Quy định format đầu vào/ra (VD: UserCreate, UserResponse)
+    │   ├── conversation.py 
+    │   └── message.py  
+    │   └── ...
+    │
+    ├── crud/               # (Tuấn) Tương tác Database (Create, Read, Update, Delete)
+    │   ├── crud_user.py    # Các hàm thuần SQL/SQLAlchemy (VD: get_user_by_email, create_user)
+    │   ├── crud_message.py 
+    │   └── ...
+    │
+    ├── services/           # (Hưng) Lõi Nghiệp vụ (Business Logic)
+    │   ├── auth_service.py # Logic đăng nhập: Kiểm tra pass -> Gọi hàm cấp Token
+    │   ├── chat_service.py # Logic chat: Kiểm tra quyền -> Gọi CRUD lưu DB -> Trả kết quả
+    │   └── ...
+    │
+    ├── api/                # (Hưng) Giao tiếp HTTP (RESTful Routers)
+    │   ├── deps.py         # Các dependencies (VD: get_db, get_current_user)
+    │   ├── auth.py         # POST /api/auth/login
+    │   ├── conversations.py# GET /api/conversations, POST /api/conversations
+    │   └── router.py       # File gom tất cả các file api nhỏ lại để nhúng vào main.py
+    │   └── ...
+    │
+    └── websockets/         # (Hà) Giao tiếp Real-time
+        ├── connection.py   # Quản lý ConnectionId, Map User với các Room
+        └── hub.py          # Lắng nghe sự kiện "gửi tin nhắn", gọi service lưu DB, và Broadcast
+        └── ...
 
 frontend/
 ├── src/
