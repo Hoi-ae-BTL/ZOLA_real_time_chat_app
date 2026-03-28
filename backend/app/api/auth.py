@@ -45,7 +45,7 @@ async def logout(
         # Gọi Service để đốt hồ sơ Thẻ dài hạn trong Database
         await logout_user(db, refresh_token)
     
-    # Ra lệnh cho trình duyệt phải ném chiếc thẻ (Cookie) vào thùng rác
+    # Ra lệnh cho trình duyệt phải ném browser's refresh token (Cookie) vào thùng rác
     response.delete_cookie(
         key="refresh_token",
         httponly=True,
