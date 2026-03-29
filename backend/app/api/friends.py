@@ -107,14 +107,18 @@ async def handle_get_my_friends(
     return friend_list
 
 
-@router.delete("/{friend_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{user_to_unfriend_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def handle_unfriend(
-    friend_id: str,
+    user_to_unfriend_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
     **API Hủy kết bạn (Unfriend)**
+
+    - Truyền vào ID của người dùng muốn hủy kết bạn.
     """
-    await friend_service.unfriend(db=db, friend_id=friend_id, current_user=current_user)
+    await friend_service.unfriend(
+        db=db, user_to_unfriend_id=user_to_unfriend_id, current_user=current_user
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

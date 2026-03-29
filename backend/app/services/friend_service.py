@@ -105,11 +105,18 @@ async def get_all_friends(db: AsyncSession, *, current_user: User) -> List[Frien
     return await crud_friend.get_friends(db, user_id=current_user.id)
 
 
-async def unfriend(db: AsyncSession, *, friend_id: str, current_user: User) -> None:
-    friendship = await crud_friend.delete_friendship(db, friend_id=friend_id)
+async def unfriend(db: AsyncSession, *, user_to_unfriend_id: str, current_user: User) -> None:
+    """
+    Service để xử lý logic hủy kết bạn.
+    """
+    # 1. Tìm xem có mối quan hệ bạn bè nào giữa 2 người không.
+    friendship = await crud_friend.check_if_friends(
+        db, user1_id=current_user.id, user2_id=user_to_unfriend_id
+    )
+
+    # 2. Nếu không tìm thấy, báo lỗi.
     if not friendship:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mối quan hệ bạn bè không tồn tại.")
-    if friendship.user_a != current_user.id and friendship.user_b != current_user.id:
-        # This check is an extra layer of security, although unlikely to be triggered
-        # if the frontend only shows the unfriend button for actual friends.
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền hủy kết bạn này.")
+
+    # 3. Nếu có, tiến hành xóa mối quan hệ đó.
+    await crud_friend.delete_friendship(db, friend_id=friendship.id)
