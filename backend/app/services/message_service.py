@@ -47,14 +47,17 @@ async def get_messages_for_conversation(
     Handles the business logic for getting conversation messages.
     1. Validates the user is a member of the conversation.
     2. Fetches the messages.
+    3. Reverses the list to show oldest messages first.
     """
     # 1. Validate user is a member of the conversation
     await conversation_service.get_and_validate_conversation(
         db=db, conversation_id=conversation_id, user=user
     )
 
-    # 2. Fetch messages
+    # 2. Fetch messages (they are likely ordered by newest first from CRUD)
     messages = await crud_message.get_messages_by_conversation(
         db=db, conversation_id=conversation_id, skip=skip, limit=limit
     )
-    return messages
+    
+    # 3. Reverse the list to get chronological order (oldest first)
+    return messages[::-1]

@@ -53,3 +53,14 @@ async def create_user(db: AsyncSession, obj_in: UserCreate) -> User:
     await db.refresh(db_user) # Cập nhật lại db_user để lấy các trường tự tăng như `id`, `created_at`
     
     return db_user
+# Thêm vào cuối file backend/app/crud/crud_user.py
+
+async def get_users_by_ids(db: AsyncSession, user_ids: list[str]) -> list[User]:
+    """Lấy danh sách người dùng dựa trên danh sách các ID."""
+    if not user_ids:
+        return []
+    stmt = select(User).where(User.id.in_(user_ids))
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
