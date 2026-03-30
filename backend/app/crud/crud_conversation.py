@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy.orm import selectinload
 
@@ -5,7 +6,7 @@ from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from backend.app.db.base import Conversation, ConversationParticipant, User
+from backend.app.db.base import Conversation, ConversationParticipant, ConversationSeenBy, User
 from backend.app.schemas.conversation import ConversationCreate, ConversationUpdate
 
 
@@ -147,3 +148,40 @@ async def hide_conversation(
     )
     await db.execute(statement)
     await db.commit()
+
+
+async def get_conversation_participant_ids(
+    db: AsyncSession, *, conversation_id: str
+) -> list[str]:
+    statement = select(ConversationParticipant.user_id).where(
+        ConversationParticipant.conversation_id == conversation_id
+    )
+    result = await db.execute(statement)
+    return list(result.scalars().all())
+
+
+async def mark_conversation_seen(
+    db: AsyncSession, *, conversation_id: str, user_id: str
+) -> datetime:
+    statement = select(ConversationSeenBy).where(
+        and_(
+            ConversationSeenBy.conversation_id == conversation_id,
+            ConversationSeenBy.user_id == user_id,
+        )
+    )
+    result = await db.execute(statement)
+    seen_record = result.scalar_one_or_none()
+    seen_at = datetime.now(timezone.utc)
+
+    if seen_record:
+        seen_record.seen_at = seen_at
+    else:
+        seen_record = ConversationSeenBy(
+            conversation_id=conversation_id,
+            user_id=user_id,
+            seen_at=seen_at,
+        )
+        db.add(seen_record)
+
+    await db.commit()
+    return seen_at

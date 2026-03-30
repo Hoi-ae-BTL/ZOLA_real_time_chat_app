@@ -62,6 +62,19 @@ async def get_message_by_id(
     result = await db.execute(statement)
     return result.scalar_one_or_none()
 
+
+async def get_latest_message_by_conversation(
+    db: AsyncSession, *, conversation_id: str
+) -> Optional[Message]:
+    statement = (
+        select(Message)
+        .where(Message.conversation_id == conversation_id)
+        .order_by(Message.created_at.desc())
+        .limit(1)
+    )
+    result = await db.execute(statement)
+    return result.scalar_one_or_none()
+
 async def update_message(
     db: AsyncSession, *, message: Message, message_in: MessageUpdate
 ) -> Message:

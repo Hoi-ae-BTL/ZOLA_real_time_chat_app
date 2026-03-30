@@ -5,6 +5,12 @@ from typing import List, Tuple
 from backend.app.crud import crud_friend, crud_user
 from backend.app.db.base import FriendRequest, User, Friend
 from backend.app.schemas.friend import FriendRequestCreate
+from backend.app.websockets.socket_manager import (
+    build_event,
+    connection_manager,
+    serialize_friend_request,
+    serialize_friendship,
+)
 
 
 async def send_friend_request(
@@ -43,6 +49,13 @@ async def send_friend_request(
 
     # 5. Nếu tất cả kiểm tra đều qua, tạo lời mời kết bạn trong DB
     friend_request = await crud_friend.create_friend_request(db, from_user_id=current_user.id, obj_in=request_data)
+    await connection_manager.emit_to_users(
+        [current_user.id, receiver.id],
+        build_event(
+            "friend_request_created",
+            data=serialize_friend_request(friend_request),
+        ),
+    )
 
     return friend_request
 
@@ -76,6 +89,17 @@ async def accept_friend_request(
     # 5. Xóa lời mời kết bạn cũ
     await crud_friend.delete_friend_request(db, request_id=request_id)
 
+    await connection_manager.emit_to_users(
+        [friend_request.from_user_id, friend_request.to_user_id],
+        build_event(
+            "friend_request_accepted",
+            data={
+                "request_id": friend_request.id,
+                "friendship": serialize_friendship(friendship),
+            },
+        ),
+    )
+
     return friendship
 
 
@@ -93,6 +117,16 @@ async def decline_or_cancel_friend_request(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền thực hiện hành động này.")
 
     await crud_friend.delete_friend_request(db, request_id=request_id)
+    await connection_manager.emit_to_users(
+        [friend_request.from_user_id, friend_request.to_user_id],
+        build_event(
+            "friend_request_removed",
+            data={
+                "request_id": friend_request.id,
+                "actor_id": current_user.id,
+            },
+        ),
+    )
 
 
 async def get_all_friend_requests(db: AsyncSession, *, current_user: User) -> Tuple[List[FriendRequest], List[FriendRequest]]:
@@ -120,3 +154,14 @@ async def unfriend(db: AsyncSession, *, user_to_unfriend_id: str, current_user: 
 
     # 3. Nếu có, tiến hành xóa mối quan hệ đó.
     await crud_friend.delete_friendship(db, friend_id=friendship.id)
+    await connection_manager.emit_to_users(
+        [current_user.id, user_to_unfriend_id],
+        build_event(
+            "friendship_removed",
+            data={
+                "friendship_id": friendship.id,
+                "user_a_id": friendship.user_a,
+                "user_b_id": friendship.user_b,
+            },
+        ),
+    )

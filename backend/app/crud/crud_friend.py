@@ -113,6 +113,17 @@ async def get_friends(db: AsyncSession, *, user_id: str) -> List[Friend]:
     result = await db.execute(statement)
     return result.scalars().all()
 
+
+async def get_friend_user_ids(db: AsyncSession, *, user_id: str) -> List[str]:
+    friendships = await get_friends(db, user_id=user_id)
+    friend_ids: list[str] = []
+    for friendship in friendships:
+        if friendship.user_a == user_id:
+            friend_ids.append(friendship.user_b)
+        else:
+            friend_ids.append(friendship.user_a)
+    return friend_ids
+
 async def check_if_friends(db: AsyncSession, *, user1_id: str, user2_id: str) -> Optional[Friend]:
     """Kiểm tra xem hai user có phải là bạn bè không."""
     u1 = min(user1_id, user2_id)

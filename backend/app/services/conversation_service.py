@@ -11,6 +11,12 @@ from backend.app.schemas.conversation import (
     ConversationUpdate
 )
 from backend.app.db.base import User, Conversation, ConversationType  # Import the correct Enum
+from backend.app.crud import crud_message
+from backend.app.websockets.socket_manager import (
+    build_event,
+    connection_manager,
+    serialize_conversation,
+)
 
 
 async def create_conversation(
@@ -61,6 +67,14 @@ async def create_conversation(
     conversation = await crud_conversation.create_conversation(
         db=db, conversation_in=conversation_in, creator_id=creator.id
     )
+    await connection_manager.emit_to_users(
+        [participant.id for participant in conversation.participants],
+        build_event(
+            "conversation_created",
+            conversation_id=conversation.id,
+            data=serialize_conversation(conversation),
+        ),
+    )
     return conversation
 
 
@@ -89,7 +103,18 @@ async def update_group_conversation(
     conversation = await get_and_validate_conversation(db=db, conversation_id=conversation_id, user=user, check_admin=True)
     if conversation.type != ConversationType.group:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This is not a group conversation.")
-    return await crud_conversation.update_conversation(db=db, conversation=conversation, conversation_in=conversation_in)
+    updated_conversation = await crud_conversation.update_conversation(
+        db=db, conversation=conversation, conversation_in=conversation_in
+    )
+    await connection_manager.emit_to_users(
+        [participant.id for participant in updated_conversation.participants],
+        build_event(
+            "conversation_updated",
+            conversation_id=updated_conversation.id,
+            data=serialize_conversation(updated_conversation),
+        ),
+    )
+    return updated_conversation
 
 
 async def add_members(
@@ -113,7 +138,21 @@ async def add_members(
     if len(users) != len(new_member_ids):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or more users not found.")
 
-    return await crud_conversation.add_members_to_conversation(db=db, conversation=conversation, user_ids=list(new_member_ids))
+    updated_conversation = await crud_conversation.add_members_to_conversation(
+        db=db, conversation=conversation, user_ids=list(new_member_ids)
+    )
+    await connection_manager.emit_to_users(
+        [participant.id for participant in updated_conversation.participants],
+        build_event(
+            "conversation_members_added",
+            conversation_id=updated_conversation.id,
+            data={
+                "conversation": serialize_conversation(updated_conversation),
+                "user_ids": list(new_member_ids),
+            },
+        ),
+    )
+    return updated_conversation
 
 
 async def remove_member(
@@ -133,7 +172,20 @@ async def remove_member(
     if not any(p.id == member_id_to_remove for p in conversation.participants):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found in this conversation.")
 
-    await crud_conversation.remove_member_from_conversation(db=db, conversation_id=conversation_id, user_id=member_id_to_remove)
+    participant_ids_before = [participant.id for participant in conversation.participants]
+    await crud_conversation.remove_member_from_conversation(
+        db=db, conversation_id=conversation_id, user_id=member_id_to_remove
+    )
+    await connection_manager.emit_to_users(
+        participant_ids_before,
+        build_event(
+            "conversation_member_removed",
+            conversation_id=conversation_id,
+            data={
+                "user_id": member_id_to_remove,
+            },
+        ),
+    )
     return
 
 
@@ -146,4 +198,41 @@ async def hide_conversation(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only direct conversations can be hidden.")
     
     await crud_conversation.hide_conversation(db=db, conversation_id=conversation_id, user_id=current_user.id)
+    await connection_manager.emit_to_users(
+        [current_user.id],
+        build_event(
+            "conversation_hidden",
+            conversation_id=conversation_id,
+            data={"user_id": current_user.id},
+        ),
+    )
     return
+
+
+async def mark_conversation_seen(
+    db: AsyncSession, *, conversation_id: str, current_user: User
+) -> dict:
+    conversation = await get_and_validate_conversation(
+        db=db, conversation_id=conversation_id, user=current_user
+    )
+    seen_at = await crud_conversation.mark_conversation_seen(
+        db=db, conversation_id=conversation_id, user_id=current_user.id
+    )
+    latest_message = await crud_message.get_latest_message_by_conversation(
+        db=db, conversation_id=conversation_id
+    )
+    payload = {
+        "conversation_id": conversation_id,
+        "user_id": current_user.id,
+        "seen_at": seen_at.isoformat(),
+        "last_message_id": latest_message.id if latest_message else None,
+    }
+    await connection_manager.emit_to_users(
+        [participant.id for participant in conversation.participants],
+        build_event(
+            "message_read",
+            conversation_id=conversation_id,
+            data=payload,
+        ),
+    )
+    return payload
