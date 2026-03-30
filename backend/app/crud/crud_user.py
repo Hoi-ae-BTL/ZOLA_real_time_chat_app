@@ -63,3 +63,4 @@ async def get_users_by_ids(db: AsyncSession, user_ids: list[str]) -> list[User]:
     result = await db.execute(stmt)
     return result.scalars().all()
 
+
