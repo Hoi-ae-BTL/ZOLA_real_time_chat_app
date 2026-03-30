@@ -16,10 +16,9 @@ from backend.app.db.base import User, Conversation, ConversationType  # Import t
 async def create_conversation(
     db: AsyncSession, *, creator: User, conversation_in: ConversationCreate
 ) -> Conversation:
-    # ... (existing create_conversation logic)
     # 1. Validate that all user IDs from the request exist
     all_user_ids = list(set(conversation_in.user_ids))
-    if all_user_ids:  # Only query if there are users to check
+    if all_user_ids:
         users = await crud_user.get_users_by_ids(db, user_ids=all_user_ids)
         if len(users) != len(all_user_ids):
             raise HTTPException(
@@ -40,7 +39,6 @@ async def create_conversation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="You cannot create a direct conversation with yourself.",
             )
-        # Check for and return existing direct conversation
         existing_conversation = await crud_conversation.get_direct_conversation_by_users(
             db=db, user1_id=creator.id, user2_id=other_user_id
         )
@@ -101,10 +99,21 @@ async def add_members(
     conversation = await get_and_validate_conversation(db=db, conversation_id=conversation_id, user=user, check_admin=True)
     if conversation.type != ConversationType.group:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This is not a group conversation.")
-    
-    # TODO: Validate that member_ids_in exist and are not already in the group.
-    
-    return await crud_conversation.add_members_to_conversation(db=db, conversation=conversation, user_ids=member_ids_in)
+
+    existing_member_ids = {p.id for p in conversation.participants}
+    new_member_ids = set(member_ids_in)
+
+    if not new_member_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No members to add.")
+
+    if new_member_ids & existing_member_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="One or more users are already in the group.")
+
+    users = await crud_user.get_users_by_ids(db, user_ids=list(new_member_ids))
+    if len(users) != len(new_member_ids):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or more users not found.")
+
+    return await crud_conversation.add_members_to_conversation(db=db, conversation=conversation, user_ids=list(new_member_ids))
 
 
 async def remove_member(
@@ -119,9 +128,22 @@ async def remove_member(
     is_self_removal = member_id_to_remove == current_user.id
 
     if not is_admin and not is_self_removal:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only remove yourself from the group.")
-    
-    # TODO: Check if the member_id_to_remove is actually in the group.
-    
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only remove yourself or be removed by an admin.")
+
+    if not any(p.id == member_id_to_remove for p in conversation.participants):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found in this conversation.")
+
     await crud_conversation.remove_member_from_conversation(db=db, conversation_id=conversation_id, user_id=member_id_to_remove)
+    return
+
+
+async def hide_conversation(
+    db: AsyncSession, *, conversation_id: str, current_user: User
+):
+    """Hides a direct conversation for the current user."""
+    conversation = await get_and_validate_conversation(db=db, conversation_id=conversation_id, user=current_user)
+    if conversation.type != ConversationType.direct:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only direct conversations can be hidden.")
+    
+    await crud_conversation.hide_conversation(db=db, conversation_id=conversation_id, user_id=current_user.id)
     return

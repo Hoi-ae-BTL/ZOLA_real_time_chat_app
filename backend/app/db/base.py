@@ -170,6 +170,7 @@ class ConversationParticipant(Base):
 
     user_id         : Mapped[str] = mapped_column("userId",         ForeignKey("User.id",         ondelete="CASCADE"), primary_key=True)
     conversation_id : Mapped[str] = mapped_column("conversationId", ForeignKey("Conversation.id", ondelete="CASCADE"), primary_key=True)
+    is_hidden       : Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     __table_args__ = (
         Index("idx_participant_user", "userId"),

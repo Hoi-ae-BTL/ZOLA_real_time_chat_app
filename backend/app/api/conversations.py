@@ -103,3 +103,17 @@ async def remove_conversation_member(
         current_user=current_user,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def hide_conversation(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    conversation_id: str,
+):
+    """Hides a direct conversation for the current user."""
+    await conversation_service.hide_conversation(
+        db=db, conversation_id=conversation_id, current_user=current_user
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
