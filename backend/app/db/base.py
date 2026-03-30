@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum,
@@ -169,6 +170,7 @@ class ConversationParticipant(Base):
 
     user_id         : Mapped[str] = mapped_column("userId",         ForeignKey("User.id",         ondelete="CASCADE"), primary_key=True)
     conversation_id : Mapped[str] = mapped_column("conversationId", ForeignKey("Conversation.id", ondelete="CASCADE"), primary_key=True)
+    is_hidden       : Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     __table_args__ = (
         Index("idx_participant_user", "userId"),
@@ -205,6 +207,9 @@ class Message(Base):
     conversation_id : Mapped[str]           = mapped_column("conversationId", ForeignKey("Conversation.id", ondelete="CASCADE"), nullable=False)
     content         : Mapped[Optional[str]] = mapped_column(Text)
     img_url         : Mapped[Optional[str]] = mapped_column("imgUrl", Text)
+    file_url        : Mapped[Optional[str]] = mapped_column("fileUrl", Text)
+    file_name       : Mapped[Optional[str]] = mapped_column("fileName", Text)
+    is_deleted      : Mapped[bool]          = mapped_column(Boolean, default=False, nullable=False)
     created_at      : Mapped[datetime]      = mapped_column("createdAt", DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at      : Mapped[datetime]      = mapped_column("updatedAt", DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -213,7 +218,7 @@ class Message(Base):
     conversation : Mapped["Conversation"] = relationship("Conversation", foreign_keys=[conversation_id], back_populates="messages")
 
     __table_args__ = (
-        CheckConstraint('content IS NOT NULL OR "imgUrl" IS NOT NULL', name="message_has_content"),
+        CheckConstraint('is_deleted OR content IS NOT NULL OR "imgUrl" IS NOT NULL OR "fileUrl" IS NOT NULL', name="message_has_content"),
         Index("idx_message_conversation", "conversationId", "createdAt"),
         Index("idx_message_sender",       "senderId"),
     )

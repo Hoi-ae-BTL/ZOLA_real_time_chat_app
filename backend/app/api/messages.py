@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
@@ -55,3 +55,22 @@ async def get_chat_history(
         limit=limit,
     )
     return messages
+
+
+@router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_message(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    message_id: str,
+):
+    """
+    **API to revoke a message.**
+
+    - A user can only revoke their own messages.
+    - The message content will be cleared and `is_deleted` will be set to `True`.
+    """
+    await message_service.revoke_message(
+        db=db, message_id=message_id, current_user=current_user
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
