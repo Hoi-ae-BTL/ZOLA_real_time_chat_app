@@ -1,7 +1,7 @@
 from typing import List, Optional
 from sqlalchemy.orm import selectinload
 
-from sqlalchemy import and_, delete, func, select
+from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -129,3 +129,21 @@ async def update_conversation(
     db.add(conversation)
     await db.commit()
     return await get_conversation_by_id(db, conversation_id=conversation.id)
+
+
+async def hide_conversation(
+    db: AsyncSession, *, conversation_id: str, user_id: str
+) -> None:
+    """Hides a conversation for a specific user."""
+    statement = (
+        update(ConversationParticipant)
+        .where(
+            and_(
+                ConversationParticipant.conversation_id == conversation_id,
+                ConversationParticipant.user_id == user_id,
+            )
+        )
+        .values(is_hidden=True)
+    )
+    await db.execute(statement)
+    await db.commit()

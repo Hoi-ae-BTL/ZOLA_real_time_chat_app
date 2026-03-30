@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 # 1. Import các Router từ thư mục app/api/
 from backend.app.api.auth import router as auth_router
@@ -7,6 +9,7 @@ from backend.app.api.users import router as user_router
 from backend.app.api.friends import router as friend_router
 from backend.app.api.conversations import router as conv_router
 from backend.app.api.messages import router as msg_router
+from backend.app.api.upload import router as upload_router
 
 # 2. Khởi tạo ứng dụng FastAPI với thông tin tài liệu Swagger UI
 app = FastAPI(
@@ -43,13 +46,21 @@ app.include_router(user_router)
 app.include_router(friend_router)
 app.include_router(conv_router)
 app.include_router(msg_router)
+app.include_router(upload_router)
 
 # Chừa sẵn chỗ cho phần Real-time của Hà (Sẽ làm ở bước sau)
 # from app.websockets.hub import router as websocket_router
 # app.include_router(websocket_router)
 
+# ---------------------------------------------------------
+# 5. CẤU HÌNH STATIC FILES
+# ---------------------------------------------------------
+UPLOAD_DIR = Path(__file__).parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
 # ------------------------------------- --------------------
-# 5. API KIỂM TRA SỨC KHỎE SERVER (Health Check)
+# 6. API KIỂM TRA SỨC KHỎE SERVER (Health Check)
 # ---------------------------------------------------------
 @app.get("/", tags=["Trang chủ"])
 async def root():
