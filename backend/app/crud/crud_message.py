@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from backend.app.db.base import Message
-from backend.app.schemas.message import MessageCreate
+from backend.app.schemas.message import MessageCreate, MessageUpdate
 
 
 async def create_message(
@@ -40,3 +40,27 @@ async def get_messages_by_conversation(
     )
     result = await db.execute(statement)
     return result.scalars().all()
+
+
+async def get_message_by_id(db: AsyncSession, *, message_id: str) -> Optional[Message]:
+    """
+    Gets a single message by its ID.
+    """
+    statement = select(Message).where(Message.id == message_id)
+    result = await db.execute(statement)
+    return result.scalar_one_or_none()
+
+
+async def update_message(
+    db: AsyncSession, *, message: Message, message_in: MessageUpdate
+) -> Message:
+    """
+    Updates a message.
+    """
+    update_data = message_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(message, field, value)
+    db.add(message)
+    await db.commit()
+    await db.refresh(message)
+    return message
