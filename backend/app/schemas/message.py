@@ -5,6 +5,8 @@ from datetime import datetime
 class MessageBase(BaseModel):
     content: Optional[str] = Field(None, max_length=5000)
     img_url: Optional[str] = None
+    file_url: Optional[str] = None
+    file_name: Optional[str] = None
 
 class MessageCreate(MessageBase):
     conversation_id: str
