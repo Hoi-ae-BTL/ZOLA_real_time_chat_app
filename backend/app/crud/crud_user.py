@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 # a session static class that provides function to work with database in asynchronous style
-from sqlalchemy.future import select
+from sqlalchemy import select, or_
 # the SELECT sql code but in python (its a function btw)
+from typing import List
 from backend.app.db.base import User
 # import the User class from the base.py file (which was used to generate the schema of the database)
 from backend.app.schemas.user import UserCreate
@@ -64,3 +65,20 @@ async def get_users_by_ids(db: AsyncSession, user_ids: list[str]) -> list[User]:
     return result.scalars().all()
 
 
+async def search_users(db: AsyncSession, *, keyword: str, current_user_id: str) -> List[User]:
+    """
+    Tìm kiếm người dùng theo username hoặc display_name, không bao gồm user hiện tại.
+    """
+    search_term = f"%{keyword}%"
+    statement = (
+        select(User)
+        .where(
+            or_(
+                User.username.ilike(search_term),
+                User.display_name.ilike(search_term)
+            )
+        )
+        .where(User.id != current_user_id)
+    )
+    result = await db.execute(statement)
+    return result.scalars().all()
