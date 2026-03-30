@@ -21,7 +21,7 @@ async def create_message(
     return db_message
 
 
-async def get_messages_by_conversation_id(
+async def get_messages_by_conversation(
     db: AsyncSession, *, conversation_id: str, skip: int = 0, limit: int = 100
 ) -> List[Message]:
     """Gets all messages for a conversation."""
