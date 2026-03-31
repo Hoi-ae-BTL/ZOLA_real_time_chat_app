@@ -13,14 +13,14 @@ class MessageCreate(MessageBase):
     # 💡 Tương tự, sender_id lấy từ Token, không nhận từ Request Body
 
 class MessageUpdate(BaseModel):
-    content: Optional[str] = Field(None, max_length=5000)
-    img_url: Optional[str] = None
+    content: str = Field(..., min_length=1, max_length=5000)
 
 class MessageResponse(MessageBase):
     id: str
     sender_id: str
     conversation_id: str
     is_deleted: bool
+    is_edited: bool
     created_at: datetime
     updated_at: datetime
 

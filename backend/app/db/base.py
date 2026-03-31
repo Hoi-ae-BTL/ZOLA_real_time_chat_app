@@ -210,6 +210,7 @@ class Message(Base):
     file_url        : Mapped[Optional[str]] = mapped_column("fileUrl", Text)
     file_name       : Mapped[Optional[str]] = mapped_column("fileName", Text)
     is_deleted      : Mapped[bool]          = mapped_column(Boolean, default=False, nullable=False)
+    is_edited       : Mapped[bool]          = mapped_column(Boolean, default=False, nullable=False)
     created_at      : Mapped[datetime]      = mapped_column("createdAt", DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at      : Mapped[datetime]      = mapped_column("updatedAt", DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

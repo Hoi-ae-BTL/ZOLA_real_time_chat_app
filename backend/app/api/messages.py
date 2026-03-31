@@ -8,6 +8,7 @@ from backend.app.db.base import User
 from backend.app.schemas.message import (
     MessageCreate,
     MessageResponse,
+    MessageUpdate,
 )
 
 router = APIRouter(prefix="/api/messages", tags=["Messages (Tin nhắn)"])
@@ -55,6 +56,26 @@ async def get_chat_history(
         limit=limit,
     )
     return messages
+
+
+@router.put("/{message_id}", response_model=MessageResponse)
+async def edit_message(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    message_id: str,
+    message_in: MessageUpdate,
+):
+    """
+    **API to edit a text message.**
+
+    - A user can only edit their own messages.
+    - The message content will be updated and `is_edited` will be set to `True`.
+    """
+    message = await message_service.update_message(
+        db=db, message_id=message_id, message_in=message_in, current_user=current_user
+    )
+    return message
 
 
 @router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
