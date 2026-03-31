@@ -1,10 +1,10 @@
 from pydantic import BaseModel, Field, ConfigDict, computed_field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class MessageBase(BaseModel):
     content: Optional[str] = Field(None, max_length=5000)
-    img_url: Optional[str] = None
+    img_url: Optional[List[str]] = None
     file_url: Optional[str] = None
     file_name: Optional[str] = None
 

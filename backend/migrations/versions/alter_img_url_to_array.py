@@ -19,15 +19,24 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    """
+    Upgrades the imgUrl column from TEXT to TEXT[].
+    It handles existing non-null text values by converting them into a single-element array.
+    """
     op.alter_column('Message', 'imgUrl',
                existing_type=sa.TEXT(),
                type_=sa.ARRAY(sa.Text()),
                existing_nullable=True,
-               postgresql_using='"imgUrl"::text[]')
+               postgresql_using='CASE WHEN "imgUrl" IS NOT NULL THEN ARRAY["imgUrl"] ELSE NULL END')
 
 
 def downgrade() -> None:
+    """
+    Downgrades the imgUrl column from TEXT[] back to TEXT.
+    It handles existing array values by taking the first element.
+    """
     op.alter_column('Message', 'imgUrl',
                existing_type=sa.ARRAY(sa.Text()),
                type_=sa.TEXT(),
-               existing_nullable=True)
+               existing_nullable=True,
+               postgresql_using='"imgUrl"[1]')

@@ -21,7 +21,11 @@ async def create_message(
     if message_in.content:
         last_message_content = message_in.content
     elif message_in.img_url:
-        last_message_content = "🖼️ [Image]"
+        # Handle single or multiple images
+        if len(message_in.img_url) > 1:
+            last_message_content = f"🖼️ [{len(message_in.img_url)} images]"
+        else:
+            last_message_content = "🖼️ [Image]"
     elif message_in.file_name:
         last_message_content = f"📎 {message_in.file_name}"
 
@@ -71,7 +75,6 @@ async def update_message(
     db.add(message)
     await db.flush()
 
-    # Also update the conversation's last_message_content if this is the last message
     conversation = (await db.execute(select(Conversation).where(Conversation.id == message.conversation_id))).scalar_one()
     if conversation.last_message_created_at == message.created_at:
         await db.execute(

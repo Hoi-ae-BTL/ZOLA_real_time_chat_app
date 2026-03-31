@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import (
+    ARRAY,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -206,7 +207,7 @@ class Message(Base):
     sender_id       : Mapped[str]           = mapped_column("senderId",       ForeignKey("User.id",         ondelete="CASCADE"), nullable=False)
     conversation_id : Mapped[str]           = mapped_column("conversationId", ForeignKey("Conversation.id", ondelete="CASCADE"), nullable=False)
     content         : Mapped[Optional[str]] = mapped_column(Text)
-    img_url         : Mapped[Optional[str]] = mapped_column("imgUrl", Text)
+    img_url         : Mapped[Optional[List[str]]] = mapped_column("imgUrl", ARRAY(Text))
     file_url        : Mapped[Optional[str]] = mapped_column("fileUrl", Text)
     file_name       : Mapped[Optional[str]] = mapped_column("fileName", Text)
     is_deleted      : Mapped[bool]          = mapped_column(Boolean, default=False, nullable=False)
