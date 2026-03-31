@@ -8,6 +8,7 @@ from backend.app.db.base import User
 from backend.app.schemas.message import (
     MessageCreate,
     MessageResponse,
+    MessageUpdate,
 )
 
 router = APIRouter(prefix="/api/messages", tags=["Messages (Tin nhắn)"])
@@ -55,6 +56,50 @@ async def get_chat_history(
         limit=limit,
     )
     return messages
+
+
+@router.get("/{conversation_id}/media", response_model=List[MessageResponse])
+async def get_conversation_media(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    conversation_id: str,
+    skip: int = Query(0, ge=0, description="Number of media files to skip"),
+    limit: int = Query(100, ge=1, le=200, description="Number of media files to return"),
+):
+    """
+    **API to get all media (images and files) in a conversation.**
+
+    - Implements pagination with `skip` and `limit`.
+    """
+    media_messages = await message_service.get_conversation_media(
+        db=db,
+        conversation_id=conversation_id,
+        user=current_user,
+        skip=skip,
+        limit=limit,
+    )
+    return media_messages
+
+
+@router.put("/{message_id}", response_model=MessageResponse)
+async def edit_message(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    message_id: str,
+    message_in: MessageUpdate,
+):
+    """
+    **API to edit a text message.**
+
+    - A user can only edit their own messages.
+    - The message content will be updated and `is_edited` will be set to `True`.
+    """
+    message = await message_service.update_message(
+        db=db, message_id=message_id, message_in=message_in, current_user=current_user
+    )
+    return message
 
 
 @router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)

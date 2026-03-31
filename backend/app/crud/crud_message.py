@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import select, update
+from sqlalchemy import select, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.base import Message, Conversation
@@ -21,7 +21,10 @@ async def create_message(
     if message_in.content:
         last_message_content = message_in.content
     elif message_in.img_url:
-        last_message_content = "🖼️ [Image]"
+        if len(message_in.img_url) > 1:
+            last_message_content = f"🖼️ [{len(message_in.img_url)} images]"
+        else:
+            last_message_content = "🖼️ [Image]"
     elif message_in.file_name:
         last_message_content = f"📎 {message_in.file_name}"
 
@@ -54,6 +57,23 @@ async def get_messages_by_conversation(
     result = await db.execute(statement)
     return result.scalars().all()
 
+async def get_media_messages_by_conversation(
+    db: AsyncSession, *, conversation_id: str, skip: int = 0, limit: int = 100
+) -> List[Message]:
+    """Gets all media messages (images or files) for a conversation."""
+    statement = (
+        select(Message)
+        .where(
+            Message.conversation_id == conversation_id,
+            or_(Message.img_url.isnot(None), Message.file_url.isnot(None))
+        )
+        .order_by(Message.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    result = await db.execute(statement)
+    return result.scalars().all()
+
 async def get_message_by_id(
     db: AsyncSession, *, message_id: str
 ) -> Optional[Message]:
@@ -78,11 +98,23 @@ async def get_latest_message_by_conversation(
 async def update_message(
     db: AsyncSession, *, message: Message, message_in: MessageUpdate
 ) -> Message:
-    """Updates a message."""
-    update_data = message_in.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(message, field, value)
+    """Updates a message's content and sets the is_edited flag."""
+    message.content = message_in.content
+    message.is_edited = True
     db.add(message)
+    await db.flush()
+
+    conversation = (await db.execute(select(Conversation).where(Conversation.id == message.conversation_id))).scalar_one()
+    if conversation.last_message_created_at == message.created_at:
+        await db.execute(
+            update(Conversation)
+            .where(Conversation.id == message.conversation_id)
+            .values(
+                last_message_content=message.content,
+                updated_at=message.updated_at
+            )
+        )
+
     await db.commit()
     await db.refresh(message)
     return message
@@ -92,14 +124,11 @@ async def delete_message(db: AsyncSession, *, message: Message):
     conversation_id = message.conversation_id
     message_id = message.id
     
-    # Get the conversation
     conv_stmt = select(Conversation).where(Conversation.id == conversation_id)
     conversation = (await db.execute(conv_stmt)).scalar_one()
 
-    # Check if the message to be deleted is the last message
     is_last_message = conversation.last_message_created_at == message.created_at
 
-    # Soft delete the message
     await db.execute(
         update(Message)
         .where(Message.id == message_id)
@@ -107,7 +136,6 @@ async def delete_message(db: AsyncSession, *, message: Message):
     )
 
     if is_last_message:
-        # Find the new last message
         latest_message_stmt = (
             select(Message)
             .where(Message.conversation_id == conversation_id, Message.is_deleted == False)
@@ -135,7 +163,6 @@ async def delete_message(db: AsyncSession, *, message: Message):
                 )
             )
         else:
-            # No messages left, or the last one was deleted
             await db.execute(
                 update(Conversation)
                 .where(Conversation.id == conversation_id)
@@ -147,5 +174,4 @@ async def delete_message(db: AsyncSession, *, message: Message):
             )
     
     await db.commit()
-    # Re-fetch the message to return the updated state
     return await get_message_by_id(db, message_id=message_id)

@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
+from typing import List
 
 from backend.app.services import conversation_service
 from backend.app.crud import crud_message, crud_conversation
@@ -80,22 +81,28 @@ async def get_messages_for_conversation(
 ) -> list[Message]:
     """
     Handles the business logic for getting conversation messages.
-    1. Validates the user is a member of the conversation.
-    2. Fetches the messages.
-    3. Reverses the list to show oldest messages first.
     """
-    # 1. Validate user is a member of the conversation
     await conversation_service.get_and_validate_conversation(
         db=db, conversation_id=conversation_id, user=user
     )
-
-    # 2. Fetch messages (they are likely ordered by newest first from CRUD)
     messages = await crud_message.get_messages_by_conversation(
         db=db, conversation_id=conversation_id, skip=skip, limit=limit
     )
-
-    # 3. Reverse the list to get chronological order (oldest first)
     return messages[::-1]
+
+async def get_conversation_media(
+        db: AsyncSession, *, conversation_id: str, user: User, skip: int, limit: int
+) -> list[Message]:
+    """
+    Handles the business logic for getting conversation media.
+    """
+    await conversation_service.get_and_validate_conversation(
+        db=db, conversation_id=conversation_id, user=user
+    )
+    media_messages = await crud_message.get_media_messages_by_conversation(
+        db=db, conversation_id=conversation_id, skip=skip, limit=limit
+    )
+    return media_messages
 
 async def update_message(
     db: AsyncSession, *, message_id: str, message_in: MessageUpdate, current_user: User
@@ -112,6 +119,16 @@ async def update_message(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only edit your own messages.",
+        )
+    if message.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot edit a deleted message.",
+        )
+    if message.content is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You can only edit text messages.",
         )
 
     return await crud_message.update_message(
