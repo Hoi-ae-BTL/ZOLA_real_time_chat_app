@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
+from typing import List
 
 from backend.app.services import conversation_service
 from backend.app.crud import crud_message, crud_conversation
@@ -45,6 +46,20 @@ async def get_messages_for_conversation(
         db=db, conversation_id=conversation_id, skip=skip, limit=limit
     )
     return messages[::-1]
+
+async def get_conversation_media(
+        db: AsyncSession, *, conversation_id: str, user: User, skip: int, limit: int
+) -> list[Message]:
+    """
+    Handles the business logic for getting conversation media.
+    """
+    await conversation_service.get_and_validate_conversation(
+        db=db, conversation_id=conversation_id, user=user
+    )
+    media_messages = await crud_message.get_media_messages_by_conversation(
+        db=db, conversation_id=conversation_id, skip=skip, limit=limit
+    )
+    return media_messages
 
 async def update_message(
     db: AsyncSession, *, message_id: str, message_in: MessageUpdate, current_user: User

@@ -58,6 +58,30 @@ async def get_chat_history(
     return messages
 
 
+@router.get("/{conversation_id}/media", response_model=List[MessageResponse])
+async def get_conversation_media(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    conversation_id: str,
+    skip: int = Query(0, ge=0, description="Number of media files to skip"),
+    limit: int = Query(100, ge=1, le=200, description="Number of media files to return"),
+):
+    """
+    **API to get all media (images and files) in a conversation.**
+
+    - Implements pagination with `skip` and `limit`.
+    """
+    media_messages = await message_service.get_conversation_media(
+        db=db,
+        conversation_id=conversation_id,
+        user=current_user,
+        skip=skip,
+        limit=limit,
+    )
+    return media_messages
+
+
 @router.put("/{message_id}", response_model=MessageResponse)
 async def edit_message(
     *,

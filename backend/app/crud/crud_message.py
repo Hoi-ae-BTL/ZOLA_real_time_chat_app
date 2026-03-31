@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import select, update
+from sqlalchemy import select, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.base import Message, Conversation
@@ -21,7 +21,6 @@ async def create_message(
     if message_in.content:
         last_message_content = message_in.content
     elif message_in.img_url:
-        # Handle single or multiple images
         if len(message_in.img_url) > 1:
             last_message_content = f"🖼️ [{len(message_in.img_url)} images]"
         else:
@@ -51,6 +50,23 @@ async def get_messages_by_conversation(
     statement = (
         select(Message)
         .where(Message.conversation_id == conversation_id)
+        .order_by(Message.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    result = await db.execute(statement)
+    return result.scalars().all()
+
+async def get_media_messages_by_conversation(
+    db: AsyncSession, *, conversation_id: str, skip: int = 0, limit: int = 100
+) -> List[Message]:
+    """Gets all media messages (images or files) for a conversation."""
+    statement = (
+        select(Message)
+        .where(
+            Message.conversation_id == conversation_id,
+            or_(Message.img_url.isnot(None), Message.file_url.isnot(None))
+        )
         .order_by(Message.created_at.desc())
         .offset(skip)
         .limit(limit)
