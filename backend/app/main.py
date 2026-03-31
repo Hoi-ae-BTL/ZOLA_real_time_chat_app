@@ -10,6 +10,9 @@ from backend.app.api.friends import router as friend_router
 from backend.app.api.conversations import router as conv_router
 from backend.app.api.messages import router as msg_router
 from backend.app.api.upload import router as upload_router
+from backend.app.websockets.chat import router as websocket_router
+from backend.app.websockets.broker import event_broker
+from backend.app.websockets.socket_manager import connection_manager
 
 # 2. Khởi tạo ứng dụng FastAPI với thông tin tài liệu Swagger UI
 app = FastAPI(
@@ -47,6 +50,7 @@ app.include_router(friend_router)
 app.include_router(conv_router)
 app.include_router(msg_router)
 app.include_router(upload_router)
+app.include_router(websocket_router)
 
 # Chừa sẵn chỗ cho phần Real-time của Hà (Sẽ làm ở bước sau)
 # from app.websockets.hub import router as websocket_router
@@ -58,6 +62,17 @@ app.include_router(upload_router)
 UPLOAD_DIR = Path(__file__).parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    connection_manager.set_external_publisher(event_broker.publish)
+    await event_broker.start(connection_manager.dispatch_external_event)
+
+
+@app.on_event("shutdown")
+async def shutdown_event() -> None:
+    await event_broker.shutdown()
 
 # ------------------------------------- --------------------
 # 6. API KIỂM TRA SỨC KHỎE SERVER (Health Check)

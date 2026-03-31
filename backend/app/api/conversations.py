@@ -117,3 +117,17 @@ async def hide_conversation(
         db=db, conversation_id=conversation_id, current_user=current_user
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{conversation_id}/read", status_code=status.HTTP_204_NO_CONTENT)
+async def mark_conversation_as_read(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    conversation_id: str,
+):
+    """Marks the current conversation as read for the current user."""
+    await conversation_service.mark_conversation_seen(
+        db=db, conversation_id=conversation_id, current_user=current_user
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

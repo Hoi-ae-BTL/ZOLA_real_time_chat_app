@@ -5,6 +5,12 @@ from backend.app.services import conversation_service
 from backend.app.crud import crud_message, crud_conversation
 from backend.app.schemas.message import MessageCreate, MessageUpdate
 from backend.app.db.base import User, Message
+from backend.app.websockets.broker import event_broker
+from backend.app.websockets.socket_manager import (
+    build_event,
+    connection_manager,
+    serialize_message,
+)
 
 
 async def create_message(
@@ -29,6 +35,43 @@ async def create_message(
     message = await crud_message.create_message(
         db=db, message_in=message_in, sender_id=sender.id
     )
+    participant_ids = [participant.id for participant in conversation.participants]
+    await connection_manager.emit_to_users(
+        participant_ids,
+        build_event(
+            "message_created",
+            conversation_id=message.conversation_id,
+            data=serialize_message(message),
+        ),
+    )
+
+    if message.img_url or message.file_url:
+        await connection_manager.emit_to_users(
+            participant_ids,
+            build_event(
+                "attachment_uploaded",
+                conversation_id=message.conversation_id,
+                data=serialize_message(message),
+            ),
+        )
+
+    online_participant_ids = connection_manager.get_connected_user_ids(participant_ids)
+    if event_broker.enabled:
+        online_participant_ids = await event_broker.get_online_user_ids(participant_ids)
+
+    delivered_to = [user_id for user_id in online_participant_ids if user_id != sender.id]
+    if delivered_to:
+        await connection_manager.emit_to_users(
+            [sender.id],
+            build_event(
+                "message_delivered",
+                conversation_id=message.conversation_id,
+                data={
+                    "message_id": message.id,
+                    "delivered_to": delivered_to,
+                },
+            ),
+        )
     return message
 
 
@@ -91,5 +134,21 @@ async def delete_message(db: AsyncSession, *, message_id: str, current_user: Use
             detail="You can only delete your own messages.",
         )
 
-    await crud_message.delete_message(db=db, message=message)
+    conversation = await crud_conversation.get_conversation_by_id(
+        db, conversation_id=message.conversation_id
+    )
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found."
+        )
+
+    deleted_message = await crud_message.delete_message(db=db, message=message)
+    await connection_manager.emit_to_users(
+        [participant.id for participant in conversation.participants],
+        build_event(
+            "message_deleted",
+            conversation_id=deleted_message.conversation_id,
+            data=serialize_message(deleted_message),
+        ),
+    )
     return
