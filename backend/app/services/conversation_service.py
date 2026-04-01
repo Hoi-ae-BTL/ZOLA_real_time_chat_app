@@ -91,8 +91,22 @@ async def get_and_validate_conversation(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
     if not any(p.id == user.id for p in conversation.participants):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not a member of this conversation.")
-    if check_admin and conversation.group_created_by != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have admin rights for this group.")
+    if check_admin:
+        current_participant_ids = {participant.id for participant in conversation.participants}
+        if (
+            conversation.type == ConversationType.group
+            and (
+                conversation.group_created_by is None
+                or conversation.group_created_by not in current_participant_ids
+            )
+        ):
+            conversation = await crud_conversation.assign_group_admin(
+                db=db,
+                conversation=conversation,
+                user_id=user.id,
+            )
+        elif conversation.group_created_by != user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have admin rights for this group.")
     return conversation
 
 
@@ -192,18 +206,34 @@ async def remove_member(
 async def hide_conversation(
     db: AsyncSession, *, conversation_id: str, current_user: User
 ):
-    """Hides a direct conversation for the current user."""
+    """Hides a direct conversation or deletes a group conversation."""
     conversation = await get_and_validate_conversation(db=db, conversation_id=conversation_id, user=current_user)
-    if conversation.type != ConversationType.direct:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only direct conversations can be hidden.")
-    
-    await crud_conversation.hide_conversation(db=db, conversation_id=conversation_id, user_id=current_user.id)
+    if conversation.type == ConversationType.direct:
+        await crud_conversation.hide_conversation(db=db, conversation_id=conversation_id, user_id=current_user.id)
+        await connection_manager.emit_to_users(
+            [current_user.id],
+            build_event(
+                "conversation_hidden",
+                conversation_id=conversation_id,
+                data={"user_id": current_user.id},
+            ),
+        )
+        return
+
+    conversation = await get_and_validate_conversation(
+        db=db,
+        conversation_id=conversation_id,
+        user=current_user,
+        check_admin=True,
+    )
+    participant_ids = [participant.id for participant in conversation.participants]
+    await crud_conversation.delete_conversation(db=db, conversation=conversation)
     await connection_manager.emit_to_users(
-        [current_user.id],
+        participant_ids,
         build_event(
-            "conversation_hidden",
+            "conversation_deleted",
             conversation_id=conversation_id,
-            data={"user_id": current_user.id},
+            data={"conversation_id": conversation_id},
         ),
     )
     return

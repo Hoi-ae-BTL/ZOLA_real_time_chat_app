@@ -1,16 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-'''
-Depends for dependency injection
-HTTPException for auto raise proper error code & message for frontend
-status for list of status code
-Query for query parameters
-OAuth2PasswordRequestForm is a special class of fastAPI that helps creates a form that receives username and password
-'''
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from backend.app.schemas.user import UserCreate, UserResponse, UserUpdate
-from backend.app.crud.crud_user import get_user_by_username, get_user_by_email, create_user, search_users
-from backend.app.core.security import get_password_hash
+from backend.app.crud.crud_user import (
+    create_user,
+    get_user_by_email,
+    get_user_by_username,
+    search_users,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.api.deps import get_db, get_current_user
 from backend.app.db.base import User
@@ -50,20 +45,19 @@ async def get_my_profile(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@router.get("/search", response_model=List[UserResponse])
-async def search_users_api(
-    q: str = Query(..., min_length=1, description="Từ khóa tìm kiếm theo username hoặc display name"),
+@router.get("/search", response_model=list[UserResponse])
+async def search_users_route(
+    q: str = Query(..., min_length=1, max_length=100),
+    limit: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    **API Tìm kiếm người dùng**
-
-    - Tìm kiếm user theo `username` hoặc `display_name`.
-    - Kết quả không bao gồm chính người dùng đang tìm kiếm.
-    """
-    users = await search_users(db=db, keyword=q, current_user_id=current_user.id)
-    return users
+    return await search_users(
+        db,
+        query=q,
+        exclude_user_id=current_user.id,
+        limit=limit,
+    )
 
 
 @router.put("/me", response_model=UserResponse)

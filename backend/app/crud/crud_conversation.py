@@ -106,6 +106,15 @@ async def add_members_to_conversation(
     return await get_conversation_by_id(db, conversation_id=conversation.id)
 
 
+async def assign_group_admin(
+    db: AsyncSession, *, conversation: Conversation, user_id: str
+) -> Conversation:
+    conversation.group_created_by = user_id
+    db.add(conversation)
+    await db.commit()
+    return await get_conversation_by_id(db, conversation_id=conversation.id)
+
+
 async def remove_member_from_conversation(
     db: AsyncSession, *, conversation_id: str, user_id: str
 ) -> None:
@@ -130,6 +139,13 @@ async def update_conversation(
     db.add(conversation)
     await db.commit()
     return await get_conversation_by_id(db, conversation_id=conversation.id)
+
+
+async def delete_conversation(
+    db: AsyncSession, *, conversation: Conversation
+) -> None:
+    await db.delete(conversation)
+    await db.commit()
 
 
 async def hide_conversation(

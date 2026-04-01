@@ -1,55 +1,70 @@
-// src/api/chat.api.js
 import apiClient from './apiClient';
 
-/**
- * Lấy thông tin cá nhân của người dùng hiện tại.
- * @returns {Promise<Object>} Profile của người dùng.
- */
 export const getMyProfileAPI = async () => {
     const response = await apiClient.get('/api/users/me');
     return response.data;
 };
 
-/**
- * Lấy tất cả các cuộc trò chuyện của người dùng hiện tại.
- * @returns {Promise<Array>} Danh sách các cuộc trò chuyện.
- */
 export const getConversationsAPI = async () => {
     const response = await apiClient.get('/api/conversations/');
-    return response.data; 
+    return response.data;
 };
 
-/**
- * Lấy thông tin chi tiết của một cuộc trò chuyện, bao gồm cả người tham gia.
- * @param {string} conversationId - ID của cuộc trò chuyện.
- * @returns {Promise<Object>} Chi tiết cuộc trò chuyện.
- */
 export const getConversationDetailsAPI = async (conversationId) => {
     const response = await apiClient.get(`/api/conversations/${conversationId}`);
     return response.data;
 };
 
-/**
- * Lấy lịch sử tin nhắn của một cuộc trò chuyện.
- * @param {string} conversationId - ID của cuộc trò chuyện.
- * @returns {Promise<Array>} Danh sách các tin nhắn.
- */
+export const createConversationAPI = async (payload) => {
+    const response = await apiClient.post('/api/conversations/', payload);
+    return response.data;
+};
+
+export const updateConversationAPI = async (conversationId, payload) => {
+    const response = await apiClient.put(`/api/conversations/${conversationId}`, payload);
+    return response.data;
+};
+
+export const addConversationMembersAPI = async (conversationId, userIds) => {
+    const response = await apiClient.post(`/api/conversations/${conversationId}/members`, {
+        user_ids: userIds,
+    });
+    return response.data;
+};
+
+export const deleteConversationAPI = async (conversationId) => {
+    await apiClient.delete(`/api/conversations/${conversationId}`);
+};
+
+export const markConversationAsReadAPI = async (conversationId) => {
+    await apiClient.post(`/api/conversations/${conversationId}/read`);
+};
+
 export const getMessagesAPI = async (conversationId) => {
     const response = await apiClient.get(`/api/messages/${conversationId}`);
     return response.data;
 };
 
-/**
- * Gửi một tin nhắn mới.
- * @param {string} conversationId - ID của cuộc trò chuyện.
- * @param {string} content - Nội dung tin nhắn.
- * @returns {Promise<Object>} Tin nhắn vừa được tạo.
- */
 export const sendMessageAPI = async (conversationId, content) => {
-    const payload = {
+    const response = await apiClient.post('/api/messages/', {
         conversation_id: conversationId,
-        content: content,
-    };
-    const response = await apiClient.post('/api/messages/', payload);
+        content,
+    });
+    return response.data;
+};
+
+export const uploadConversationFileAPI = async (conversationId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post('/api/upload/file', formData, {
+        params: {
+            conversation_id: conversationId,
+        },
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+
     return response.data;
 };
