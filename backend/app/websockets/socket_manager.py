@@ -57,6 +57,7 @@ def serialize_conversation(conversation: Conversation) -> dict[str, Any]:
         "type": conversation.type.value if hasattr(conversation.type, "value") else conversation.type,
         "group_name": conversation.group_name,
         "group_created_by": conversation.group_created_by,
+        "participant_count": len(participants),
         "last_message_content": conversation.last_message_content,
         "last_message_created_at": _serialize_datetime(conversation.last_message_created_at),
         "last_message_sender": conversation.last_message_sender,

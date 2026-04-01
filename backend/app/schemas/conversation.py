@@ -32,6 +32,7 @@ class ConversationUpdate(BaseModel):
 class ConversationResponse(ConversationBase):
     id: str
     group_created_by: Optional[str] = None
+    participant_count: int = 0
     last_message_content: Optional[str] = None
     last_message_created_at: Optional[datetime] = None
     last_message_sender: Optional[str] = None

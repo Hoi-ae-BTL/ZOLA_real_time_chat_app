@@ -1,26 +1,30 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import PrivateRoute from './components/PrivateRoute';
+import ProtectedAppLayout from './components/layout/ProtectedAppLayout';
+import ChatPage from './pages/ChatPage';
+import ContactsPage from './pages/ContactsPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import ChatPage from './pages/ChatPage';
-import PrivateRoute from './components/PrivateRoute';
+import SettingsPage from './pages/SettingsPage';
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        {/* Route được bảo vệ */}
-        <Route element={<PrivateRoute />}>
-          <Route path="/" element={<ChatPage />} />
-          {/* Thêm các route cần bảo vệ khác vào đây */}
-        </Route>
+    return (
+        <BrowserRouter>
+            <Routes>
+                <Route element={<PrivateRoute />}>
+                    <Route element={<ProtectedAppLayout />}>
+                        <Route path="/" element={<Navigate to="/chat" replace />} />
+                        <Route path="/chat" element={<ChatPage />} />
+                        <Route path="/contacts" element={<ContactsPage />} />
+                        <Route path="/settings" element={<SettingsPage />} />
+                    </Route>
+                </Route>
 
-        {/* Route công khai */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Routes>
-    </BrowserRouter>
-  );
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+            </Routes>
+        </BrowserRouter>
+    );
 }
 
 export default App;

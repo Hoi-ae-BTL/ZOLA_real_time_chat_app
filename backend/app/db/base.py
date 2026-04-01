@@ -160,6 +160,10 @@ class Conversation(Base):
         ),
     )
 
+    @property
+    def participant_count(self) -> int:
+        return len(self.participants or [])
+
 
 # ---------------------------------------------------------------------------
 # ConversationParticipant  (User <-> Conversation many-to-many)

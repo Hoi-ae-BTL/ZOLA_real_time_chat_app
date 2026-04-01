@@ -1,15 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-'''
-Depends for dependency injection
-HTTPException for auto raise proper error code & message for frontend
-status for list of status code
-OAuth2PasswordRequestForm is a special class of fastAPI that helps creates a form that receives username and password
-'''
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from backend.app.schemas.user import UserCreate, UserResponse, UserUpdate
-from backend.app.crud.crud_user import get_user_by_username, get_user_by_email, create_user
-from backend.app.core.security import get_password_hash
+from backend.app.crud.crud_user import (
+    create_user,
+    get_user_by_email,
+    get_user_by_username,
+    search_users,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.api.deps import get_db, get_current_user
 from backend.app.db.base import User
@@ -47,6 +43,21 @@ async def get_my_profile(current_user: User = Depends(get_current_user)):
     - API này cần Token đăng nhập. Lấy data dựa trên người đang cầm Token.
     """
     return current_user
+
+
+@router.get("/search", response_model=list[UserResponse])
+async def search_users_route(
+    q: str = Query(..., min_length=1, max_length=100),
+    limit: int = Query(20, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await search_users(
+        db,
+        query=q,
+        exclude_user_id=current_user.id,
+        limit=limit,
+    )
 
 
 @router.put("/me", response_model=UserResponse)
