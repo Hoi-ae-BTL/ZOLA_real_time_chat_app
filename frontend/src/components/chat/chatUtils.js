@@ -95,7 +95,7 @@ export const getInitials = (name = '') => {
 };
 
 export const resolveAssetUrl = (path) => {
-    if (!path) {
+    if (!path || typeof path !== 'string') {
         return '';
     }
 
@@ -103,7 +103,10 @@ export const resolveAssetUrl = (path) => {
         return path;
     }
 
-    return `${getApiBaseUrl()}${path}`;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    // Đảm bảo không bị lặp dấu gạch chéo
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${baseUrl}${cleanPath}`;
 };
 
 export const getConversationName = (conversation, currentUserId) => {

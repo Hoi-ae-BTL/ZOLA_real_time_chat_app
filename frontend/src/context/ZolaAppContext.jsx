@@ -31,6 +31,7 @@ import {
 } from '../components/chat/chatUtils';
 import { ZolaAppStoreContext } from './zolaAppStoreContext';
 import { useChatSocket } from '../hooks/useChatSocket';
+import { useVideoCall } from '../hooks/useVideoCall';
 
 const THEME_STORAGE_KEY = 'zola_theme';
 const SIDEBAR_ERROR_TIMEOUT_MS = 4000;
@@ -115,6 +116,7 @@ export function ZolaAppProvider({ children }) {
     const typingTimeoutRef = useRef(null);
     const hasSentTypingRef = useRef(false);
     const lastEventIdRef = useRef(0);
+    const videoCallEventRef = useRef(null);
 
     const [theme, setTheme] = useState(() => localStorage.getItem(THEME_STORAGE_KEY) || 'light');
     const [profile, setProfile] = useState(null);
@@ -520,6 +522,9 @@ export function ZolaAppProvider({ children }) {
                 await bootstrapApp();
                 return;
             default:
+                if (event.type.startsWith('video_call_')) {
+                    videoCallEventRef.current?.(event);
+                }
                 return;
         }
     };
@@ -530,6 +535,9 @@ export function ZolaAppProvider({ children }) {
         lastEventIdRef,
         onEvent: handleSocketEvent,
     });
+
+    const videoCallState = useVideoCall(currentUserId, sendEvent);
+    videoCallEventRef.current = videoCallState.handleVideoCallEvent;
 
     useEffect(() => {
         activeConversationIdRef.current = activeConversationId;
@@ -1068,6 +1076,7 @@ export function ZolaAppProvider({ children }) {
         typingLabel,
         updateConversation,
         upsertConversation,
+        videoCallState,
     };
 
     return <ZolaAppStoreContext.Provider value={value}>{children}</ZolaAppStoreContext.Provider>;
