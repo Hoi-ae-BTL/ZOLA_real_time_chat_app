@@ -28,6 +28,7 @@ import {
     isSameDay,
     resolveAssetUrl,
 } from '../components/chat/chatUtils';
+import Picker from 'emoji-picker-react';
 
 const IconButton = ({ children, onClick, title, disabled = false }) => (
     <button
@@ -167,6 +168,7 @@ export default function ChatPage() {
     const [groupName, setGroupName] = useState('');
     const [createError, setCreateError] = useState('');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(true);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const searchValue = useDeferredValue(searchTerm).trim().toLowerCase();
 
     const {
@@ -196,6 +198,8 @@ export default function ChatPage() {
         updateConversation,
         videoCallState,
         profile,
+        setMessageInput,
+        theme,
     } = useZolaApp();
 
     const filteredConversations = useMemo(
@@ -501,12 +505,22 @@ export default function ChatPage() {
                                         className="max-h-36 min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-[var(--text-primary)] outline-none"
                                     />
 
-                                    <IconButton title="Emoji picker">
-                                        <SmilePlus size={18} />
-                                    </IconButton>
+                                    <div className="relative">
+                                        <IconButton title="Emoji picker" onClick={() => setShowEmojiPicker((prev) => !prev)}>
+                                            <SmilePlus size={18} />
+                                        </IconButton>
+                                        {showEmojiPicker && (
+                                            <div className="absolute bottom-14 right-0 z-50 shadow-2xl">
+                                                <Picker onEmojiClick={(emojiObject) => setMessageInput((prev) => prev + emojiObject.emoji)} theme={theme === 'dark' ? 'dark' : 'light'} />
+                                            </div>
+                                        )}
+                                    </div>
                                     <button
                                         type="button"
-                                        onClick={handleSendMessage}
+                                        onClick={(e) => {
+                                            handleSendMessage();
+                                            setShowEmojiPicker(false);
+                                        }}
                                         disabled={!messageInput.trim() || isSendingMessage}
                                         className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--accent-strong)] text-white shadow-[0_10px_24px_rgba(0,104,255,0.18)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
