@@ -34,6 +34,7 @@ import { useChatSocket } from '../hooks/useChatSocket';
 
 const THEME_STORAGE_KEY = 'zola_theme';
 const SIDEBAR_ERROR_TIMEOUT_MS = 4000;
+const MESSAGE_PAGE_SIZE = 100;
 
 const getAttachmentPreviewLabel = (message) => {
     if (message.content) {
@@ -129,11 +130,14 @@ export function ZolaAppProvider({ children }) {
     const [sidebarError, setSidebarError] = useState('');
     const [messagesLoading, setMessagesLoading] = useState(false);
     const [messagesError, setMessagesError] = useState('');
+    const [hasOlderMessages, setHasOlderMessages] = useState(false);
+    const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
     const [isSendingMessage, setIsSendingMessage] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isCreateBusy, setIsCreateBusy] = useState(false);
     const [isConversationActionBusy, setIsConversationActionBusy] = useState(false);
     const [friendActionLoadingMap, setFriendActionLoadingMap] = useState({});
+    const activeConversationIdRef = useRef(null);
 
     const currentUserId = profile?.id || null;
     const activeConversation = conversations.find(
@@ -528,6 +532,10 @@ export function ZolaAppProvider({ children }) {
     });
 
     useEffect(() => {
+        activeConversationIdRef.current = activeConversationId;
+    }, [activeConversationId]);
+
+    useEffect(() => {
         document.documentElement.dataset.theme = theme;
         localStorage.setItem(THEME_STORAGE_KEY, theme);
     }, [theme]);
@@ -600,6 +608,8 @@ export function ZolaAppProvider({ children }) {
         if (!activeConversationId) {
             setMessages([]);
             setMessagesError('');
+            setHasOlderMessages(false);
+            setIsLoadingOlderMessages(false);
             return undefined;
         }
 
@@ -608,15 +618,21 @@ export function ZolaAppProvider({ children }) {
         const loadMessages = async () => {
             setMessagesLoading(true);
             setMessagesError('');
+            setHasOlderMessages(false);
+            setIsLoadingOlderMessages(false);
 
             try {
-                const history = await getMessagesAPI(activeConversationId);
+                const history = await getMessagesAPI(activeConversationId, {
+                    limit: MESSAGE_PAGE_SIZE,
+                    skip: 0,
+                });
                 if (isCancelled) {
                     return;
                 }
 
                 const sortedHistory = sortMessages(history);
                 setMessages(sortedHistory);
+                setHasOlderMessages(history.length === MESSAGE_PAGE_SIZE);
                 setConversations((previous) => {
                     const targetConversation = previous.find((item) => item.id === activeConversationId);
                     if (!targetConversation) {
@@ -753,14 +769,70 @@ export function ZolaAppProvider({ children }) {
         try {
             await uploadConversationFileAPI(activeConversationId, file);
             if (socketStatus !== 'open') {
-                const history = await getMessagesAPI(activeConversationId);
+                const history = await getMessagesAPI(activeConversationId, {
+                    limit: MESSAGE_PAGE_SIZE,
+                    skip: 0,
+                });
                 setMessages(sortMessages(history));
+                setHasOlderMessages(history.length === MESSAGE_PAGE_SIZE);
                 await hydrateConversation(activeConversationId);
             }
         } catch (error) {
             console.error('Unable to upload attachment:', error);
         } finally {
             setIsUploading(false);
+        }
+    };
+
+    const loadOlderMessages = async () => {
+        if (
+            !activeConversationId
+            || messagesLoading
+            || isLoadingOlderMessages
+            || !hasOlderMessages
+        ) {
+            return [];
+        }
+
+        const targetConversationId = activeConversationId;
+        const skip = messages.length;
+
+        setIsLoadingOlderMessages(true);
+
+        try {
+            const history = await getMessagesAPI(targetConversationId, {
+                limit: MESSAGE_PAGE_SIZE,
+                skip,
+            });
+
+            if (activeConversationIdRef.current !== targetConversationId) {
+                return [];
+            }
+
+            if (history.length === 0) {
+                setHasOlderMessages(false);
+                return [];
+            }
+
+            setMessages((previous) => {
+                const existingIds = new Set(previous.map((message) => message.id));
+                const olderMessages = history.filter((message) => !existingIds.has(message.id));
+
+                if (olderMessages.length === 0) {
+                    return previous;
+                }
+
+                return sortMessages([...olderMessages, ...previous]);
+            });
+            setHasOlderMessages(history.length === MESSAGE_PAGE_SIZE);
+            return history;
+        } catch (error) {
+            console.error('Unable to load older messages:', error);
+            return [];
+        } finally {
+            if (activeConversationIdRef.current === targetConversationId) {
+                setIsLoadingOlderMessages(false);
+            }
         }
     };
 
@@ -970,8 +1042,11 @@ export function ZolaAppProvider({ children }) {
         incomingRequests,
         isCreateBusy,
         isConversationActionBusy,
+        isLoadingOlderMessages,
         isSendingMessage,
         isUploading,
+        hasOlderMessages,
+        loadOlderMessages,
         messageInput,
         messages,
         messagesError,
