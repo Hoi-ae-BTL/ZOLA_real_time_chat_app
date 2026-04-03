@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import AliasChoices, BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -52,8 +52,8 @@ class RemoveMemberRequest(BaseModel):
 
 # Dùng để ép kiểu dữ liệu từ bảng ConversationSeenBy
 class SeenByResponse(BaseModel):
-    user_id: str
-    seen_at: datetime
+    user_id: str = Field(validation_alias=AliasChoices("user_id", "id"))
+    seen_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 

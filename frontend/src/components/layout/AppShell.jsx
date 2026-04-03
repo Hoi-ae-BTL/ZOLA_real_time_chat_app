@@ -7,17 +7,18 @@ import {
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Avatar } from '../chat/ChatPrimitives';
 import { useZolaApp } from '../../hooks/useZolaApp';
+import { useTranslation } from 'react-i18next';
 
 const primaryNavItems = [
     {
         to: '/chat',
-        label: 'Messages',
+        labelKey: 'messages',
         icon: MessageSquareText,
         match: '/chat',
     },
     {
         to: '/contacts',
-        label: 'Contacts',
+        labelKey: 'contacts',
         icon: ContactRound,
         match: '/contacts',
     },
@@ -26,19 +27,20 @@ const primaryNavItems = [
 const utilityNavItems = [
     {
         to: '/settings',
-        label: 'Settings',
+        labelKey: 'settings',
         icon: Settings,
         match: '/settings',
     },
 ];
 
-const getPageLabel = (pathname) => {
+const getPageLabel = (pathname, t) => {
     const match = [...primaryNavItems, ...utilityNavItems].find((item) => pathname.startsWith(item.match));
-    return match?.label || 'Zola';
+    return match ? t(match.labelKey) : 'Zola';
 };
 
 const RailNavLink = ({ item, badge = null, mobile = false }) => {
     const Icon = item.icon;
+    const { t } = useTranslation();
 
     return (
         <NavLink
@@ -61,7 +63,7 @@ const RailNavLink = ({ item, badge = null, mobile = false }) => {
                     >
                         <Icon size={20} />
                     </span>
-                    <span>{item.label}</span>
+                    <span>{t(item.labelKey)}</span>
                     {badge ? (
                         <span className="absolute right-1 top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
                             {badge}
@@ -75,8 +77,9 @@ const RailNavLink = ({ item, badge = null, mobile = false }) => {
 
 export default function AppShell() {
     const location = useLocation();
+    const { t } = useTranslation();
     const { pendingRequestCount, profile, sidebarError, socketStatus } = useZolaApp();
-    const pageLabel = getPageLabel(location.pathname);
+    const pageLabel = getPageLabel(location.pathname, t);
 
     return (
         <div className="h-[100dvh] overflow-hidden bg-[var(--app-bg)] text-[var(--text-primary)]">
@@ -108,13 +111,13 @@ export default function AppShell() {
 
                         <button
                             type="button"
-                            title="Help"
+                            title={t('help')}
                             className="group relative flex flex-col items-center gap-1 px-2 py-3 text-[11px] font-semibold text-[var(--text-dim)] transition hover:text-[var(--text-primary)]"
                         >
                             <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl">
                                 <HelpCircle size={20} />
                             </span>
-                            <span>Help</span>
+                            <span>{t('help')}</span>
                         </button>
 
                         <div className="relative mt-2">

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useZolaApp } from '../hooks/useZolaApp';
 import { CreateConversationModal } from '../components/chat/ChatOverlays';
+import { IncomingCallOverlay, ActiveCallOverlay } from '../components/chat/VideoCallOverlays';
 import ConversationInfoPanel from '../components/chat/ConversationInfoPanel';
 import { Avatar, StackedAvatars } from '../components/chat/ChatPrimitives';
 import {
@@ -27,6 +28,7 @@ import {
     isSameDay,
     resolveAssetUrl,
 } from '../components/chat/chatUtils';
+import Picker from 'emoji-picker-react';
 
 const IconButton = ({ children, onClick, title, disabled = false }) => (
     <button
@@ -40,29 +42,36 @@ const IconButton = ({ children, onClick, title, disabled = false }) => (
     </button>
 );
 
-const Attachment = ({ message }) => (
-    <div className="space-y-3">
-        {message.content ? <p className="whitespace-pre-wrap break-words">{message.content}</p> : null}
-        {message.img_url ? (
-            <img
-                src={resolveAssetUrl(message.img_url)}
-                alt="attachment"
-                className="max-h-[320px] w-full rounded-[18px] object-cover"
-            />
-        ) : null}
-        {message.file_url ? (
-            <a
-                href={resolveAssetUrl(message.file_url)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-3 rounded-2xl bg-[var(--input-bg)] px-4 py-3 text-sm text-inherit"
-            >
-                <Paperclip size={16} />
-                <span>{message.file_name || 'Attachment'}</span>
-            </a>
-        ) : null}
-    </div>
-);
+// File: src/pages/ChatPage.jsx
+
+const Attachment = ({ message }) => {
+    return (
+        <div className="space-y-3">
+            {message.content && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
+
+            {/* Sửa lại phần hiển thị ảnh để an toàn hơn */}
+            {message.img_url && (
+                <div className="grid gap-2">
+                    {/* Nếu img_url là chuỗi đơn thì hiện 1 ảnh, nếu là mảng thì loop qua */}
+                    {Array.isArray(message.img_url) ? (
+                        message.img_url.map((url, i) => (
+                            <img key={i} src={resolveAssetUrl(url)} alt="attachment" className="max-h-[320px] w-full rounded-[18px] object-cover" />
+                        ))
+                    ) : (
+                        <img src={resolveAssetUrl(message.img_url)} alt="attachment" className="max-h-[320px] w-full rounded-[18px] object-cover" />
+                    )}
+                </div>
+            )}
+
+            {message.file_url && (
+                <a href={resolveAssetUrl(message.file_url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 rounded-2xl bg-[var(--input-bg)] px-4 py-3 text-sm text-inherit">
+                    <Paperclip size={16} />
+                    <span>{message.file_name || 'Attachment'}</span>
+                </a>
+            )}
+        </div>
+    );
+};
 
 const formatDayDivider = (value) => {
     if (!value) {
@@ -150,7 +159,9 @@ function ConversationRow({
 
 export default function ChatPage() {
     const fileInputRef = useRef(null);
-    const messagesEndRef = useRef(null);
+    const messagesScrollRef = useRef(null);
+    const preserveScrollRef = useRef(null);
+    const shouldStickToBottomRef = useRef(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isConversationInfoOpen, setIsConversationInfoOpen] = useState(false);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -159,6 +170,7 @@ export default function ChatPage() {
     const [groupName, setGroupName] = useState('');
     const [createError, setCreateError] = useState('');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(true);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const searchValue = useDeferredValue(searchTerm).trim().toLowerCase();
 
     const {
@@ -170,14 +182,17 @@ export default function ChatPage() {
         currentUserId,
         deleteConversation,
         friends,
+        hasOlderMessages,
         handleComposerChange,
         handleFileSelected,
         handleSendMessage,
         handleSendOnEnter,
         isCreateBusy,
         isConversationActionBusy,
+        isLoadingOlderMessages,
         isSendingMessage,
         isUploading,
+        loadOlderMessages,
         messageInput,
         messages,
         messagesError,
@@ -186,6 +201,10 @@ export default function ChatPage() {
         selectConversation,
         typingLabel,
         updateConversation,
+        videoCallState,
+        profile,
+        setMessageInput,
+        theme,
     } = useZolaApp();
 
     const filteredConversations = useMemo(
@@ -199,9 +218,79 @@ export default function ChatPage() {
 
     const activeDirectUser = activeConversation ? getDirectConversationUser(activeConversation, currentUserId) : null;
 
+    const scrollMessagesToBottom = () => {
+        const container = messagesScrollRef.current;
+        if (!container) {
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const nextContainer = messagesScrollRef.current;
+                if (!nextContainer) {
+                    return;
+                }
+
+                nextContainer.scrollTop = nextContainer.scrollHeight;
+            });
+        });
+    };
+
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        shouldStickToBottomRef.current = true;
+        preserveScrollRef.current = null;
+    }, [activeConversation?.id]);
+
+    useEffect(() => {
+        const container = messagesScrollRef.current;
+        if (!container) {
+            return;
+        }
+
+        if (preserveScrollRef.current) {
+            const { previousScrollHeight, previousScrollTop } = preserveScrollRef.current;
+            container.scrollTop = container.scrollHeight - previousScrollHeight + previousScrollTop;
+            preserveScrollRef.current = null;
+            return;
+        }
+
+        if (shouldStickToBottomRef.current) {
+            scrollMessagesToBottom();
+        }
+    }, [messages, activeConversation?.id, messagesLoading]);
+
+    const handleAttachmentLoad = () => {
+        if (!shouldStickToBottomRef.current) {
+            return;
+        }
+
+        scrollMessagesToBottom();
+    };
+
+    const handleMessagesScroll = async (event) => {
+        const container = event.currentTarget;
+        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        shouldStickToBottomRef.current = distanceFromBottom < 120;
+
+        if (
+            container.scrollTop > 120
+            || !hasOlderMessages
+            || isLoadingOlderMessages
+            || messagesLoading
+        ) {
+            return;
+        }
+
+        preserveScrollRef.current = {
+            previousScrollHeight: container.scrollHeight,
+            previousScrollTop: container.scrollTop,
+        };
+
+        const olderMessages = await loadOlderMessages();
+        if (!olderMessages.length) {
+            preserveScrollRef.current = null;
+        }
+    };
 
     const openCreate = (group = false) => {
         setCreateError('');
@@ -234,6 +323,14 @@ export default function ChatPage() {
             setIsMobileSidebarOpen(false);
         } catch (error) {
             setCreateError(error.response?.data?.detail || 'Unable to create a new conversation.');
+        }
+    };
+
+    const handleStartVideoCall = () => {
+        if (activeConversation?.type === 'direct' && activeDirectUser) {
+            videoCallState.startCall(activeDirectUser, profile);
+        } else {
+            alert('Tính năng gọi video hiện chỉ hỗ trợ cho cuộc trò chuyện 1-1.');
         }
     };
 
@@ -353,7 +450,7 @@ export default function ChatPage() {
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <IconButton title="Start video call">
+                                    <IconButton title="Start video call" onClick={handleStartVideoCall}>
                                         <Video size={18} />
                                     </IconButton>
                                     <IconButton title="Start voice call">
@@ -372,7 +469,11 @@ export default function ChatPage() {
                             </div>
                         </header>
 
-                        <div className="chat-canvas soft-scroll flex-1 overflow-y-auto px-4 py-6 md:px-6">
+                        <div
+                            ref={messagesScrollRef}
+                            onScroll={handleMessagesScroll}
+                            className="chat-canvas soft-scroll flex-1 overflow-y-auto px-4 py-6 md:px-6"
+                        >
                             {messagesLoading ? (
                                 <div className="flex h-full items-center justify-center text-[var(--text-muted)]">
                                     <LoaderCircle size={28} className="animate-spin" />
@@ -385,6 +486,15 @@ export default function ChatPage() {
                                 </div>
                             ) : (
                                 <div className="space-y-5">
+                                    {isLoadingOlderMessages ? (
+                                        <div className="flex justify-center">
+                                            <div className="inline-flex items-center gap-2 rounded-full bg-[var(--input-bg)] px-4 py-2 text-xs font-medium text-[var(--text-muted)]">
+                                                <LoaderCircle size={14} className="animate-spin" />
+                                                Loading older messages
+                                            </div>
+                                        </div>
+                                    ) : null}
+
                                     {messages.map((message, index) => {
                                         const isMine = message.sender_id === currentUserId;
                                         const previousMessage = messages[index - 1];
@@ -432,7 +542,7 @@ export default function ChatPage() {
                                                             }`}
                                                             style={isMine ? { background: 'var(--bubble-me)' } : undefined}
                                                         >
-                                                            <Attachment message={message} />
+                                                            <Attachment message={message} onMediaLoad={handleAttachmentLoad} />
                                                         </div>
 
                                                         <p className={`mt-2 text-[11px] text-[var(--text-dim)] ${isMine ? 'text-right' : 'text-left'}`}>
@@ -451,8 +561,6 @@ export default function ChatPage() {
                                             </div>
                                         </div>
                                     ) : null}
-
-                                    <div ref={messagesEndRef} />
                                 </div>
                             )}
                         </div>
@@ -483,12 +591,22 @@ export default function ChatPage() {
                                         className="max-h-36 min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-[var(--text-primary)] outline-none"
                                     />
 
-                                    <IconButton title="Emoji picker">
-                                        <SmilePlus size={18} />
-                                    </IconButton>
+                                    <div className="relative">
+                                        <IconButton title="Emoji picker" onClick={() => setShowEmojiPicker((prev) => !prev)}>
+                                            <SmilePlus size={18} />
+                                        </IconButton>
+                                        {showEmojiPicker && (
+                                            <div className="absolute bottom-14 right-0 z-50 shadow-2xl">
+                                                <Picker onEmojiClick={(emojiObject) => setMessageInput((prev) => prev + emojiObject.emoji)} theme={theme === 'dark' ? 'dark' : 'light'} />
+                                            </div>
+                                        )}
+                                    </div>
                                     <button
                                         type="button"
-                                        onClick={handleSendMessage}
+                                        onClick={(e) => {
+                                            handleSendMessage();
+                                            setShowEmojiPicker(false);
+                                        }}
                                         disabled={!messageInput.trim() || isSendingMessage}
                                         className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--accent-strong)] text-white shadow-[0_10px_24px_rgba(0,104,255,0.18)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
@@ -558,6 +676,19 @@ export default function ChatPage() {
                 onDeleteConversation={deleteConversation}
                 onUpdateConversation={updateConversation}
                 onlineUserIds={onlineUserIds}
+            />
+
+            <IncomingCallOverlay 
+                incomingCall={videoCallState.incomingCall}
+                onAccept={() => videoCallState.acceptCall(profile)}
+                onReject={() => videoCallState.rejectCall()}
+            />
+
+            <ActiveCallOverlay 
+                activeCall={videoCallState.activeCall}
+                localStream={videoCallState.localStream}
+                remoteStream={videoCallState.remoteStream}
+                onEndCall={() => videoCallState.endCall(videoCallState.activeCall?.partnerId)}
             />
         </div>
     );

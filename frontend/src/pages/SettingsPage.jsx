@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Bell,
     Globe,
@@ -8,46 +9,10 @@ import {
     Search,
     ShieldCheck,
     UserRound,
-    Volume2,
 } from 'lucide-react';
 import { logoutAPI } from '../api/auth.api';
 import { Avatar } from '../components/chat/ChatPrimitives';
 import { useZolaApp } from '../hooks/useZolaApp';
-
-const menuItems = [
-    { id: 'security', label: 'Account Security', icon: UserRound },
-    { id: 'privacy', label: 'Privacy', icon: Lock },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'theme', label: 'Interface Theme', icon: Palette },
-    { id: 'language', label: 'Language', icon: Globe },
-];
-
-const securityCards = [
-    {
-        icon: Search,
-        title: 'Last Seen Status',
-        value: 'Everyone can see',
-        tone: 'bg-sky-50 text-sky-600',
-    },
-    {
-        icon: ShieldCheck,
-        title: 'E2E Encryption',
-        value: 'Active for all chats',
-        tone: 'bg-indigo-50 text-indigo-600',
-    },
-    {
-        icon: QrCode,
-        title: '2-Step Verification',
-        value: 'Enabled via SMS',
-        tone: 'bg-amber-50 text-amber-600',
-    },
-    {
-        icon: Lock,
-        title: 'Block List',
-        value: 'Manage restricted contacts',
-        tone: 'bg-rose-50 text-rose-600',
-    },
-];
 
 const ThemePreview = ({ title, active, preview, onClick }) => (
     <button
@@ -82,7 +47,9 @@ const ThemePreview = ({ title, active, preview, onClick }) => (
 );
 
 export default function SettingsPage() {
+    const { t, i18n } = useTranslation();
     const [activeMenu, setActiveMenu] = useState('security');
+    
     const {
         conversations,
         friends,
@@ -93,6 +60,41 @@ export default function SettingsPage() {
         theme,
     } = useZolaApp();
 
+    const menuItems = [
+        { id: 'security', label: t('security'), icon: UserRound },
+        { id: 'privacy', label: t('privacy'), icon: Lock },
+        { id: 'notifications', label: t('notifications'), icon: Bell },
+        { id: 'theme', label: t('theme'), icon: Palette },
+        { id: 'language', label: t('language'), icon: Globe },
+    ];
+
+    const securityCards = [
+        {
+            icon: Search,
+            title: t('lastSeen'),
+            value: t('lastSeenValue'),
+            tone: 'bg-sky-50 text-sky-600',
+        },
+        {
+            icon: ShieldCheck,
+            title: t('e2e'),
+            value: t('e2eValue'),
+            tone: 'bg-indigo-50 text-indigo-600',
+        },
+        {
+            icon: QrCode,
+            title: t('twoFactor'),
+            value: t('twoFactorValue'),
+            tone: 'bg-amber-50 text-amber-600',
+        },
+        {
+            icon: Lock,
+            title: t('blockList'),
+            value: t('blockListValue'),
+            tone: 'bg-rose-50 text-rose-600',
+        },
+    ];
+
     const storageMetrics = useMemo(() => {
         const photos = Math.max(0.8, Number((friends.length * 0.08).toFixed(1)));
         const videos = Math.max(0.5, Number((conversations.length * 0.06).toFixed(1)));
@@ -100,24 +102,18 @@ export default function SettingsPage() {
         const others = 0.5;
         const total = Number((photos + videos + docs + others).toFixed(1));
 
-        return {
-            docs,
-            others,
-            photos,
-            total,
-            videos,
-        };
+        return { docs, others, photos, total, videos };
     }, [conversations.length, friends.length]);
 
     const segments = useMemo(() => {
         const total = storageMetrics.total || 1;
         return [
-            { label: `Photos (${storageMetrics.photos} GB)`, width: `${(storageMetrics.photos / total) * 100}%`, color: 'bg-[var(--accent-strong)]' },
-            { label: `Videos (${storageMetrics.videos} GB)`, width: `${(storageMetrics.videos / total) * 100}%`, color: 'bg-blue-400' },
-            { label: `Documents (${storageMetrics.docs} GB)`, width: `${(storageMetrics.docs / total) * 100}%`, color: 'bg-amber-500' },
-            { label: `Other Apps (${storageMetrics.others} GB)`, width: `${(storageMetrics.others / total) * 100}%`, color: 'bg-slate-300' },
+            { label: `${t('photos')} (${storageMetrics.photos} GB)`, width: `${(storageMetrics.photos / total) * 100}%`, color: 'bg-[var(--accent-strong)]' },
+            { label: `${t('videos')} (${storageMetrics.videos} GB)`, width: `${(storageMetrics.videos / total) * 100}%`, color: 'bg-blue-400' },
+            { label: `${t('documents')} (${storageMetrics.docs} GB)`, width: `${(storageMetrics.docs / total) * 100}%`, color: 'bg-amber-500' },
+            { label: `${t('otherApps')} (${storageMetrics.others} GB)`, width: `${(storageMetrics.others / total) * 100}%`, color: 'bg-slate-300' },
         ];
-    }, [storageMetrics]);
+    }, [storageMetrics, t]);
 
     return (
         <div className="soft-scroll h-full overflow-y-auto bg-[var(--app-bg)] px-4 py-4 md:px-5 md:py-5">
@@ -133,7 +129,7 @@ export default function SettingsPage() {
                         />
                         <input
                             type="text"
-                            placeholder="Search"
+                            placeholder={t('search')}
                             className="w-full rounded-full bg-[var(--input-bg)] py-3 pl-10 pr-4 text-sm text-[var(--text-primary)] outline-none shadow-[inset_0_0_0_1px_var(--input-border)] focus:bg-[var(--card-bg)] focus:shadow-[inset_0_0_0_1px_var(--accent-soft)]"
                         />
                     </div>
@@ -149,9 +145,9 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            <div className="mt-8">
+            <div className="mt-8 flex items-end justify-between">
                 <h1 className="text-[2.1rem] font-extrabold tracking-[-0.04em] text-[var(--text-primary)]">
-                    Settings
+                    {t('settings')}
                 </h1>
             </div>
 
@@ -174,25 +170,25 @@ export default function SettingsPage() {
                                 size="lg"
                             />
                             <h2 className="mt-4 text-[1.8rem] font-bold tracking-[-0.03em] text-[var(--text-primary)]">
-                                {profile?.display_name || 'Alex Nguyen'}
+                                {profile?.display_name || 'User Name'}
                             </h2>
                             <p className="mt-1 text-sm text-[var(--text-muted)]">
-                                {profile?.email || profile?.username || 'alex.n@design.com'}
+                                {profile?.email || profile?.username || 'user@email.com'}
                             </p>
                         </div>
 
-                        <div className="mt-5 grid grid-cols-2 gap-3">
+                        <div className="mt-5 flex gap-3">
                             <button
                                 type="button"
-                                className="rounded-2xl bg-[var(--input-bg)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]"
+                                className="flex-1 rounded-2xl bg-[var(--input-bg)] py-3 text-sm font-semibold text-[var(--text-primary)]"
                             >
-                                QR Code
+                                {t('qrCode')}
                             </button>
                             <button
                                 type="button"
-                                className="rounded-2xl bg-[var(--accent-strong)] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(0,104,255,0.16)]"
+                                className="flex-1 rounded-2xl bg-[var(--accent-strong)] px-3 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(0,104,255,0.16)] text-center leading-tight"
                             >
-                                Manage Account
+                                {t('manageAccount')}
                             </button>
                         </div>
                     </section>
@@ -225,63 +221,92 @@ export default function SettingsPage() {
                         onClick={() => logoutAPI()}
                         className="w-full rounded-[24px] bg-red-50 px-4 py-3 text-sm font-semibold text-red-600"
                     >
-                        Sign out
+                        {t('signOut')}
                     </button>
                 </div>
 
                 <div className="space-y-5">
-                    <section className="rounded-[28px] bg-[var(--card-bg)] p-6 shadow-[0_12px_32px_rgba(0,82,204,0.04)]">
+                    
+                    {/* LANGUAGE COMPONENT */}
+                    {activeMenu === 'language' && (
+                        <section className="rounded-[28px] bg-[var(--card-bg)] p-6 shadow-[0_12px_32px_rgba(0,82,204,0.04)] animate-in fade-in slide-in-from-bottom-2">
+                            <h2 className="text-[1.75rem] font-bold tracking-[-0.03em] text-[var(--text-primary)] mb-6">
+                                {t('language')}
+                            </h2>
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={() => i18n.changeLanguage('vi')}
+                                    className={`flex items-center justify-between rounded-2xl p-4 transition ${i18n.language === 'vi' ? 'bg-[var(--accent-faint)] text-[var(--accent)] ring-1 ring-[var(--accent)]' : 'bg-[var(--input-bg)] text-[var(--text-primary)] hover:bg-[var(--profile-bg-hover)]'}`}
+                                >
+                                    <span className="font-semibold">{t('vietnamese')}</span>
+                                    {i18n.language === 'vi' && <span>✓</span>}
+                                </button>
+                                <button 
+                                    onClick={() => i18n.changeLanguage('en')}
+                                    className={`flex items-center justify-between rounded-2xl p-4 transition ${i18n.language === 'en' ? 'bg-[var(--accent-faint)] text-[var(--accent)] ring-1 ring-[var(--accent)]' : 'bg-[var(--input-bg)] text-[var(--text-primary)] hover:bg-[var(--profile-bg-hover)]'}`}
+                                >
+                                    <span className="font-semibold">{t('english')}</span>
+                                    {i18n.language === 'en' && <span>✓</span>}
+                                </button>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* THEME COMPONENT */}
+                    {activeMenu === 'theme' && (
+                    <section className="rounded-[28px] bg-[var(--card-bg)] p-6 shadow-[0_12px_32px_rgba(0,82,204,0.04)] animate-in fade-in slide-in-from-bottom-2">
                         <div className="flex flex-wrap items-start justify-between gap-4">
                             <div>
                                 <h2 className="text-[1.75rem] font-bold tracking-[-0.03em] text-[var(--text-primary)]">
-                                    Appearance
+                                    {t('appearance')}
                                 </h2>
                                 <p className="mt-1 text-sm text-[var(--text-muted)]">
-                                    Customize how Zalo looks on your device.
+                                    {t('appearanceDesc')}
                                 </p>
                             </div>
-
                             <div className="rounded-full bg-[var(--input-bg)] px-4 py-2 text-xs font-semibold text-[var(--text-muted)]">
-                                {socketStatus === 'open' ? 'Connected' : 'Syncing'}
+                                {socketStatus === 'open' ? t('connected') : t('syncing')}
                             </div>
                         </div>
 
                         <div className="mt-6 grid gap-4 lg:grid-cols-3">
                             <ThemePreview
-                                title="Light"
+                                title={t('light')}
                                 active={theme === 'light'}
                                 onClick={() => setTheme('light')}
                                 preview="bg-[linear-gradient(180deg,#f9fbff_0%,#edf4ff_100%)]"
                             />
                             <ThemePreview
-                                title="Dark"
+                                title={t('dark')}
                                 active={theme === 'dark'}
                                 onClick={() => setTheme('dark')}
                                 preview="bg-[linear-gradient(180deg,#1a2230_0%,#111827_100%)] text-white"
                             />
                             <ThemePreview
-                                title="System"
+                                title={t('system')}
                                 active={false}
-                                onClick={() => setActiveMenu('theme')}
+                                onClick={() => {}}
                                 preview="bg-[linear-gradient(90deg,#f9fbff_0%,#f9fbff_50%,#111827_50%,#111827_100%)]"
                             />
                         </div>
                     </section>
+                    )}
 
-                    <section className="rounded-[28px] bg-[var(--card-bg)] p-6 shadow-[0_12px_32px_rgba(0,82,204,0.04)]">
+                    {/* SECURITY & PRIVACY */}
+                    {(activeMenu === 'security' || activeMenu === 'privacy') && (
+                    <section className="rounded-[28px] bg-[var(--card-bg)] p-6 shadow-[0_12px_32px_rgba(0,82,204,0.04)] animate-in fade-in slide-in-from-bottom-2">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <h2 className="text-[1.75rem] font-bold tracking-[-0.03em] text-[var(--text-primary)]">
-                                Privacy & Security
+                                {t('privacyAndSecurity')}
                             </h2>
                             <button type="button" className="text-sm font-semibold text-[var(--accent)]">
-                                View Full Policy
+                                {t('viewFullPolicy')}
                             </button>
                         </div>
 
                         <div className="mt-5 grid gap-4 md:grid-cols-2">
                             {securityCards.map((card) => {
                                 const Icon = card.icon;
-
                                 return (
                                     <button
                                         key={card.title}
@@ -307,24 +332,26 @@ export default function SettingsPage() {
                             })}
                         </div>
                     </section>
+                    )}
 
-                    <section className="rounded-[28px] bg-[var(--card-bg)] p-6 shadow-[0_12px_32px_rgba(0,82,204,0.04)]">
+                    {/* STORAGE & DATA */}
+                    {(activeMenu === 'security' || activeMenu === 'privacy' || activeMenu === 'notifications') && (
+                    <section className="rounded-[28px] bg-[var(--card-bg)] p-6 shadow-[0_12px_32px_rgba(0,82,204,0.04)] animate-in fade-in slide-in-from-bottom-2">
                         <div className="flex flex-wrap items-start justify-between gap-4">
                             <div>
                                 <h2 className="text-[1.75rem] font-bold tracking-[-0.03em] text-[var(--text-primary)]">
-                                    Storage and Data
+                                    {t('storageAndData')}
                                 </h2>
                                 <p className="mt-1 text-sm text-[var(--text-muted)]">
-                                    Manage your chat media and cached files.
+                                    {t('storageDesc')}
                                 </p>
                             </div>
-
                             <div className="text-right">
                                 <p className="text-3xl font-extrabold tracking-[-0.04em] text-[var(--accent)]">
                                     {storageMetrics.total} GB
                                 </p>
                                 <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-dim)]">
-                                    Used
+                                    {t('used')}
                                 </p>
                             </div>
                         </div>
@@ -350,19 +377,21 @@ export default function SettingsPage() {
 
                         <div className="mt-6 grid gap-4 md:grid-cols-3">
                             <div className="rounded-[24px] bg-[var(--input-bg)] px-4 py-4">
-                                <p className="text-sm font-semibold text-[var(--text-primary)]">Friends synced</p>
+                                <p className="text-sm font-semibold text-[var(--text-primary)]">{t('friendsSynced')}</p>
                                 <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{friends.length}</p>
                             </div>
                             <div className="rounded-[24px] bg-[var(--input-bg)] px-4 py-4">
-                                <p className="text-sm font-semibold text-[var(--text-primary)]">Chats stored</p>
+                                <p className="text-sm font-semibold text-[var(--text-primary)]">{t('chatsStored')}</p>
                                 <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{conversations.length}</p>
                             </div>
                             <div className="rounded-[24px] bg-[var(--input-bg)] px-4 py-4">
-                                <p className="text-sm font-semibold text-[var(--text-primary)]">Online contacts</p>
+                                <p className="text-sm font-semibold text-[var(--text-primary)]">{t('onlineContacts')}</p>
                                 <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{onlineUserIds.length}</p>
                             </div>
                         </div>
                     </section>
+                    )}
+
                 </div>
             </div>
         </div>
