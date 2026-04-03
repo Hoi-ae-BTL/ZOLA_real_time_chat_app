@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useZolaApp } from '../hooks/useZolaApp';
 import { CreateConversationModal } from '../components/chat/ChatOverlays';
+import { IncomingCallOverlay, ActiveCallOverlay } from '../components/chat/VideoCallOverlays';
 import ConversationInfoPanel from '../components/chat/ConversationInfoPanel';
 import { Avatar, StackedAvatars } from '../components/chat/ChatPrimitives';
 import {
@@ -193,6 +194,8 @@ export default function ChatPage() {
         selectConversation,
         typingLabel,
         updateConversation,
+        videoCallState,
+        profile,
     } = useZolaApp();
 
     const filteredConversations = useMemo(
@@ -241,6 +244,14 @@ export default function ChatPage() {
             setIsMobileSidebarOpen(false);
         } catch (error) {
             setCreateError(error.response?.data?.detail || 'Unable to create a new conversation.');
+        }
+    };
+
+    const handleStartVideoCall = () => {
+        if (activeConversation?.type === 'direct' && activeDirectUser) {
+            videoCallState.startCall(activeDirectUser, profile);
+        } else {
+            alert('Tính năng gọi video hiện chỉ hỗ trợ cho cuộc trò chuyện 1-1.');
         }
     };
 
@@ -360,7 +371,7 @@ export default function ChatPage() {
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <IconButton title="Start video call">
+                                    <IconButton title="Start video call" onClick={handleStartVideoCall}>
                                         <Video size={18} />
                                     </IconButton>
                                     <IconButton title="Start voice call">
@@ -565,6 +576,19 @@ export default function ChatPage() {
                 onDeleteConversation={deleteConversation}
                 onUpdateConversation={updateConversation}
                 onlineUserIds={onlineUserIds}
+            />
+
+            <IncomingCallOverlay 
+                incomingCall={videoCallState.incomingCall}
+                onAccept={() => videoCallState.acceptCall(profile)}
+                onReject={() => videoCallState.rejectCall()}
+            />
+
+            <ActiveCallOverlay 
+                activeCall={videoCallState.activeCall}
+                localStream={videoCallState.localStream}
+                remoteStream={videoCallState.remoteStream}
+                onEndCall={() => videoCallState.endCall(videoCallState.activeCall?.partnerId)}
             />
         </div>
     );

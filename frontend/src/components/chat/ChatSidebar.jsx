@@ -13,6 +13,7 @@ import {
     getConversationName,
     getConversationSubtitle,
 } from './chatUtils';
+import { useTranslation } from 'react-i18next';
 
 const ToolbarButton = ({ badge, children, collapsed, compact = false, label, onClick, title }) => (
     <button
@@ -114,6 +115,7 @@ export default function ChatSidebar({
     theme,
     toggleTheme,
 }) {
+    const { t } = useTranslation();
     const hasGroups = groupConversations.length > 0;
     const hasFriends = friends.length > 0;
 
@@ -132,7 +134,7 @@ export default function ChatSidebar({
                         {!sidebarCollapsed && (
                             <div className="mt-1 flex items-center gap-2 text-xs text-[var(--text-dim)]">
                                 <span className={`h-2 w-2 rounded-full ${socketStatus === 'open' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-                                <span>{socketStatus === 'open' ? 'Kết nối ổn định' : 'Đang đồng bộ lại kết nối'}</span>
+                                <span>{socketStatus === 'open' ? t('connected') : t('syncing')}</span>
                             </div>
                         )}
                     </div>
@@ -155,27 +157,27 @@ export default function ChatSidebar({
                     <ToolbarButton
                         badge={0}
                         collapsed={sidebarCollapsed}
-                        label="Chat mới"
+                        label={t('newGroup')}
                         onClick={onCreateChat}
-                        title="Tạo cuộc trò chuyện mới"
+                        title={t('newMessage')}
                     >
                         <MessageSquarePlus size={18} />
                     </ToolbarButton>
                     <ToolbarButton
                         badge={0}
                         collapsed={sidebarCollapsed}
-                        label="Lập nhóm"
+                        label="Nhóm"
                         onClick={onCreateGroup}
-                        title="Tạo nhóm chat"
+                        title={t('newGroup')}
                     >
                         <UsersRound size={18} />
                     </ToolbarButton>
                     <ToolbarButton
                         badge={pendingRequestCount}
                         collapsed={sidebarCollapsed}
-                        label="Kết bạn"
+                        label={t('contacts')}
                         onClick={onOpenFriendHub}
-                        title="Quản lý kết bạn"
+                        title={t('contacts')}
                     >
                         <UserPlus size={18} />
                     </ToolbarButton>
@@ -191,7 +193,7 @@ export default function ChatSidebar({
                             type="text"
                             value={searchTerm}
                             onChange={onSearchChange}
-                            placeholder="Tìm kiếm cuộc trò chuyện"
+                            placeholder={t('search')}
                             className="w-full rounded-2xl border border-[var(--input-border)] bg-[var(--input-bg)] py-3 pl-11 pr-4 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-dim)] focus:border-[var(--accent-soft)] focus:ring-4 focus:ring-[var(--ring)]"
                         />
                     </div>
@@ -203,7 +205,7 @@ export default function ChatSidebar({
                     {!sidebarCollapsed && (
                         <div className="mb-3 flex items-center justify-between px-1">
                             <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--section-title)]">
-                                Nhóm chat
+                                {t('all')}
                             </h2>
                             <span className="text-xs font-medium text-[var(--text-dim)]">{groupConversations.length}</span>
                         </div>
@@ -247,7 +249,7 @@ export default function ChatSidebar({
                     {!sidebarCollapsed && (
                         <div className="mb-3 flex items-center justify-between px-1">
                             <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--section-title)]">
-                                Bạn bè
+                                {t('contacts')}
                             </h2>
                             <span className="text-xs font-medium text-[var(--text-dim)]">{friends.length}</span>
                         </div>
@@ -276,8 +278,8 @@ export default function ChatSidebar({
                                             text: directConversation
                                                 ? getConversationSubtitle(directConversation)
                                                 : isOnline
-                                                  ? 'Đang trực tuyến'
-                                                  : 'Bấm để bắt đầu nhắn tin',
+                                                  ? t('online')
+                                                  : t('offline'),
                                             time: formatSidebarTime(
                                                 directConversation?.last_message_created_at,
                                             ),

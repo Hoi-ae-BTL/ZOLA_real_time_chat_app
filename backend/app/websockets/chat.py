@@ -192,6 +192,25 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 )
                 continue
 
+            if event_type in {"video_call_request", "video_call_accept", "video_call_reject", "video_call_end"}:
+                target_user_id = payload.get("target_user_id")
+                if not target_user_id:
+                    await send_error(
+                        connection,
+                        "missing_target_user_id",
+                        "target_user_id is required for video call events.",
+                    )
+                    continue
+
+                await connection_manager.emit_to_users(
+                    [target_user_id],
+                    build_event(
+                        event_type,
+                        data=payload.get("data", {}),
+                    ),
+                )
+                continue
+
             await send_error(
                 connection,
                 "unsupported_event",
