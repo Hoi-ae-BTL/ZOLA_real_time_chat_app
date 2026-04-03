@@ -214,8 +214,11 @@ export default function ChatPage() {
     const activeDirectUser = activeConversation ? getDirectConversationUser(activeConversation, currentUserId) : null;
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        const timeoutId = setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        }, 50);
+        return () => clearTimeout(timeoutId);
+    }, [messages, activeConversation?.id, messagesLoading]);
 
     const openCreate = (group = false) => {
         setCreateError('');

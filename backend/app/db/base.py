@@ -66,7 +66,7 @@ class User(Base):
     friendships_as_b : Mapped[List["Friend"]] = relationship("Friend", foreign_keys="Friend.user_b", back_populates="user_b_rel", cascade="all, delete-orphan")
 
     conversations      : Mapped[List["Conversation"]] = relationship("Conversation", secondary="ConversationParticipant", back_populates="participants")
-    seen_conversations : Mapped[List["Conversation"]] = relationship("Conversation", secondary="ConversationSeenBy",      back_populates="seen_by")
+    seen_conversations : Mapped[List["Conversation"]] = relationship("Conversation", secondary="ConversationSeenBy",      back_populates="seen_by_users")
 
     sent_messages : Mapped[List["Message"]] = relationship("Message", foreign_keys="Message.sender_id", back_populates="sender", cascade="all, delete-orphan")
     sessions      : Mapped[List["Session"]] = relationship("Session", back_populates="user", cascade="all, delete-orphan")
@@ -147,7 +147,8 @@ class Conversation(Base):
 
     # Relationships
     participants : Mapped[List["User"]]    = relationship("User", secondary="ConversationParticipant", back_populates="conversations")
-    seen_by      : Mapped[List["User"]]    = relationship("User", secondary="ConversationSeenBy",      back_populates="seen_conversations")
+    seen_by_users: Mapped[List["User"]]    = relationship("User", secondary="ConversationSeenBy",      back_populates="seen_conversations")
+    seen_by      : Mapped[List["ConversationSeenBy"]] = relationship("ConversationSeenBy")
     messages     : Mapped[List["Message"]] = relationship("Message", back_populates="conversation",    cascade="all, delete-orphan")
 
     group_creator           : Mapped[Optional["User"]] = relationship("User", foreign_keys=[group_created_by])

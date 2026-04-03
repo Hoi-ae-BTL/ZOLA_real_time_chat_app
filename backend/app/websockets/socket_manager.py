@@ -66,7 +66,8 @@ def serialize_conversation(conversation: Conversation) -> dict[str, Any]:
         "participants": [serialize_user(user) for user in participants],
         "seen_by": [
             {
-                "user_id": user.id,
+                "user_id": user.user_id,
+                "seen_at": _serialize_datetime(getattr(user, "seen_at", None)),
             }
             for user in seen_by
         ],
