@@ -40,8 +40,10 @@ export const markConversationAsReadAPI = async (conversationId) => {
     await apiClient.post(`/api/conversations/${conversationId}/read`);
 };
 
-export const getMessagesAPI = async (conversationId) => {
-    const response = await apiClient.get(`/api/messages/${conversationId}`);
+export const getMessagesAPI = async (conversationId, params = {}) => {
+    const response = await apiClient.get(`/api/messages/${conversationId}`, {
+        params,
+    });
     return response.data;
 };
 

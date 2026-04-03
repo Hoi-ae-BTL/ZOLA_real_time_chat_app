@@ -159,7 +159,9 @@ function ConversationRow({
 
 export default function ChatPage() {
     const fileInputRef = useRef(null);
-    const messagesEndRef = useRef(null);
+    const messagesScrollRef = useRef(null);
+    const preserveScrollRef = useRef(null);
+    const shouldStickToBottomRef = useRef(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isConversationInfoOpen, setIsConversationInfoOpen] = useState(false);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -180,14 +182,17 @@ export default function ChatPage() {
         currentUserId,
         deleteConversation,
         friends,
+        hasOlderMessages,
         handleComposerChange,
         handleFileSelected,
         handleSendMessage,
         handleSendOnEnter,
         isCreateBusy,
         isConversationActionBusy,
+        isLoadingOlderMessages,
         isSendingMessage,
         isUploading,
+        loadOlderMessages,
         messageInput,
         messages,
         messagesError,
@@ -213,9 +218,79 @@ export default function ChatPage() {
 
     const activeDirectUser = activeConversation ? getDirectConversationUser(activeConversation, currentUserId) : null;
 
+    const scrollMessagesToBottom = () => {
+        const container = messagesScrollRef.current;
+        if (!container) {
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const nextContainer = messagesScrollRef.current;
+                if (!nextContainer) {
+                    return;
+                }
+
+                nextContainer.scrollTop = nextContainer.scrollHeight;
+            });
+        });
+    };
+
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        shouldStickToBottomRef.current = true;
+        preserveScrollRef.current = null;
+    }, [activeConversation?.id]);
+
+    useEffect(() => {
+        const container = messagesScrollRef.current;
+        if (!container) {
+            return;
+        }
+
+        if (preserveScrollRef.current) {
+            const { previousScrollHeight, previousScrollTop } = preserveScrollRef.current;
+            container.scrollTop = container.scrollHeight - previousScrollHeight + previousScrollTop;
+            preserveScrollRef.current = null;
+            return;
+        }
+
+        if (shouldStickToBottomRef.current) {
+            scrollMessagesToBottom();
+        }
+    }, [messages, activeConversation?.id, messagesLoading]);
+
+    const handleAttachmentLoad = () => {
+        if (!shouldStickToBottomRef.current) {
+            return;
+        }
+
+        scrollMessagesToBottom();
+    };
+
+    const handleMessagesScroll = async (event) => {
+        const container = event.currentTarget;
+        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        shouldStickToBottomRef.current = distanceFromBottom < 120;
+
+        if (
+            container.scrollTop > 120
+            || !hasOlderMessages
+            || isLoadingOlderMessages
+            || messagesLoading
+        ) {
+            return;
+        }
+
+        preserveScrollRef.current = {
+            previousScrollHeight: container.scrollHeight,
+            previousScrollTop: container.scrollTop,
+        };
+
+        const olderMessages = await loadOlderMessages();
+        if (!olderMessages.length) {
+            preserveScrollRef.current = null;
+        }
+    };
 
     const openCreate = (group = false) => {
         setCreateError('');
@@ -394,7 +469,11 @@ export default function ChatPage() {
                             </div>
                         </header>
 
-                        <div className="chat-canvas soft-scroll flex-1 overflow-y-auto px-4 py-6 md:px-6">
+                        <div
+                            ref={messagesScrollRef}
+                            onScroll={handleMessagesScroll}
+                            className="chat-canvas soft-scroll flex-1 overflow-y-auto px-4 py-6 md:px-6"
+                        >
                             {messagesLoading ? (
                                 <div className="flex h-full items-center justify-center text-[var(--text-muted)]">
                                     <LoaderCircle size={28} className="animate-spin" />
@@ -407,6 +486,15 @@ export default function ChatPage() {
                                 </div>
                             ) : (
                                 <div className="space-y-5">
+                                    {isLoadingOlderMessages ? (
+                                        <div className="flex justify-center">
+                                            <div className="inline-flex items-center gap-2 rounded-full bg-[var(--input-bg)] px-4 py-2 text-xs font-medium text-[var(--text-muted)]">
+                                                <LoaderCircle size={14} className="animate-spin" />
+                                                Loading older messages
+                                            </div>
+                                        </div>
+                                    ) : null}
+
                                     {messages.map((message, index) => {
                                         const isMine = message.sender_id === currentUserId;
                                         const previousMessage = messages[index - 1];
@@ -454,7 +542,7 @@ export default function ChatPage() {
                                                             }`}
                                                             style={isMine ? { background: 'var(--bubble-me)' } : undefined}
                                                         >
-                                                            <Attachment message={message} />
+                                                            <Attachment message={message} onMediaLoad={handleAttachmentLoad} />
                                                         </div>
 
                                                         <p className={`mt-2 text-[11px] text-[var(--text-dim)] ${isMine ? 'text-right' : 'text-left'}`}>
@@ -473,8 +561,6 @@ export default function ChatPage() {
                                             </div>
                                         </div>
                                     ) : null}
-
-                                    <div ref={messagesEndRef} />
                                 </div>
                             )}
                         </div>
