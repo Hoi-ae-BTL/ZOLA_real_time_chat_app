@@ -7,6 +7,7 @@ from backend.app.crud.crud_user import get_user_by_username
 from backend.app.core.security import verify_password, create_access_token, create_refresh_token
 from backend.app.db.base import Session
 
+# Hàm xác thực người dùng 
 async def authenticate_user(db: AsyncSession, username: str, password: str) -> dict:
     # Bước 1: Tìm người dùng trong Database
     user = await get_user_by_username(db, username=username)
@@ -36,7 +37,7 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> d
     db.add(db_session)
     await db.flush() # Ghi nháp (file deps.py sẽ tự động commit khi request thành công)
     
-    # Bước 6: Trả kết quả về cho API gọt giũa
+    # Bước 6: Trả kết quả về cho API 
     return {
         "access_token": access_token, 
         "refresh_token": refresh_token, 
