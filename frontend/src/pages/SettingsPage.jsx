@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Bell,
@@ -9,8 +9,10 @@ import {
     Search,
     ShieldCheck,
     UserRound,
+    Camera,
+    LoaderCircle
 } from 'lucide-react';
-import { logoutAPI } from '../api/auth.api';
+import { logoutAPI, uploadAvatarAPI } from '../api/auth.api';
 import { Avatar } from '../components/chat/ChatPrimitives';
 import { useZolaApp } from '../hooks/useZolaApp';
 
@@ -49,16 +51,40 @@ const ThemePreview = ({ title, active, preview, onClick }) => (
 export default function SettingsPage() {
     const { t, i18n } = useTranslation();
     const [activeMenu, setActiveMenu] = useState('security');
+    const avatarInputRef = useRef(null);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     
     const {
         conversations,
         friends,
         onlineUserIds,
         profile,
+        setProfile,
         setTheme,
         socketStatus,
         theme,
     } = useZolaApp();
+
+    const handleAvatarSelected = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        
+        try {
+            setIsUploadingAvatar(true);
+            const updatedUser = await uploadAvatarAPI(file);
+            if (setProfile) {
+                setProfile(updatedUser);
+            }
+        } catch (error) {
+            console.error('Lỗi upload avatar:', error);
+            alert('Không thể cập nhật ảnh đại diện');
+        } finally {
+            setIsUploadingAvatar(false);
+            if (avatarInputRef.current) {
+                avatarInputRef.current.value = '';
+            }
+        }
+    };
 
     const menuItems = [
         { id: 'security', label: t('security'), icon: UserRound },
@@ -120,7 +146,7 @@ export default function SettingsPage() {
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <p className="text-2xl font-extrabold tracking-[-0.03em] text-[var(--brand-text)]">
-                        Zalo Chat
+                        Zola Chat
                     </p>
                     <div className="relative hidden w-[220px] md:block">
                         <Search
@@ -164,11 +190,23 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="mt-1 flex flex-col items-center text-center">
-                            <Avatar
-                                name={profile?.display_name || 'Zola'}
-                                src={profile?.avatar_url}
-                                size="lg"
-                            />
+                            <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+                                <Avatar
+                                    name={profile?.display_name || 'Zola'}
+                                    src={profile?.avatar_url}
+                                    size="lg"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {isUploadingAvatar ? <LoaderCircle size={24} className="text-white animate-spin" /> : <Camera size={24} className="text-white" />}
+                                </div>
+                                <input
+                                    type="file"
+                                    ref={avatarInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleAvatarSelected}
+                                />
+                            </div>
                             <h2 className="mt-4 text-[1.8rem] font-bold tracking-[-0.03em] text-[var(--text-primary)]">
                                 {profile?.display_name || 'User Name'}
                             </h2>

@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, File, UploadFile
+import shutil
+import uuid
+from pathlib import Path
 from backend.app.schemas.user import UserCreate, UserResponse, UserUpdate
 from backend.app.crud.crud_user import (
     create_user,
     get_user_by_email,
     get_user_by_username,
     search_users,
+    update_user,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.api.deps import get_db, get_current_user
@@ -66,3 +70,32 @@ async def update_my_profile(data: UserUpdate):
     **API Cập nhật hồ sơ (Đổi tên, Avatar, Bio...)**
     """
     pass
+
+UPLOAD_DIR = Path(__file__).parent.parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+@router.post("/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    **API Upload ảnh đại diện**
+    """
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only images are allowed")
+
+    file_ext = Path(file.filename).suffix
+    new_filename = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}{file_ext}"
+    file_path = UPLOAD_DIR / new_filename
+
+    with file_path.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    file_url = f"/uploads/{new_filename}"
+    
+    # Cập nhật thông tin user trong database
+    updated_user = await update_user(db, db_obj=current_user, obj_in={"avatar_url": file_url})
+    
+    return updated_user

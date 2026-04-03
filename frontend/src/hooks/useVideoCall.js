@@ -59,7 +59,8 @@ export function useVideoCall(currentUserId, sendEvent) {
                 callerId: data.callerId,
                 callerName: data.callerName,
                 callerAvatar: data.callerAvatar,
-                peerId: data.peerId
+                peerId: data.peerId,
+                isVideo: data.isVideo !== false
             });
         } else if (type === 'video_call_accept') {
             const partnerPeerId = data.peerId;
@@ -85,9 +86,9 @@ export function useVideoCall(currentUserId, sendEvent) {
         }
     }, [activeCall, incomingCall, sendEvent, cleanupCall]);
 
-    const startCall = async (targetUser, currentUserProfile) => {
+    const startCall = async (targetUser, currentUserProfile, isVideo = true) => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
             setLocalStream(stream);
             localStreamRef.current = stream;
 
@@ -104,7 +105,8 @@ export function useVideoCall(currentUserId, sendEvent) {
                     partnerName: targetUser.display_name || targetUser.username,
                     partnerAvatar: targetUser.avatar_url,
                     established: false,
-                    isCaller: true
+                    isCaller: true,
+                    isVideo
                 });
 
                 sendEvent({
@@ -114,7 +116,8 @@ export function useVideoCall(currentUserId, sendEvent) {
                         callerId: currentUserProfile.id,
                         callerName: currentUserProfile.display_name || currentUserProfile.username,
                         callerAvatar: currentUserProfile.avatar_url,
-                        peerId: id
+                        peerId: id,
+                        isVideo
                     }
                 });
             });
@@ -134,7 +137,7 @@ export function useVideoCall(currentUserId, sendEvent) {
         if (!incomingCall) return;
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: incomingCall.isVideo, audio: true });
             setLocalStream(stream);
             localStreamRef.current = stream;
 
@@ -151,7 +154,8 @@ export function useVideoCall(currentUserId, sendEvent) {
                     partnerName: incomingCall.callerName,
                     partnerAvatar: incomingCall.callerAvatar,
                     established: true,
-                    isCaller: false
+                    isCaller: false,
+                    isVideo: incomingCall.isVideo
                 });
 
                 sendEvent({

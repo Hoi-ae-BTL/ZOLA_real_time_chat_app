@@ -121,7 +121,7 @@ const resources = {
       qrCode: "QR Code",
       
       appearance: "Appearance",
-      appearanceDesc: "Customize how Zalo looks on your device.",
+      appearanceDesc: "Customize how Zola looks on your device.",
       light: "Light",
       dark: "Dark",
       system: "System",

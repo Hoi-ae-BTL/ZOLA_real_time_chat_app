@@ -326,11 +326,11 @@ export default function ChatPage() {
         }
     };
 
-    const handleStartVideoCall = () => {
+    const handleStartVideoCall = (isVideo = true) => {
         if (activeConversation?.type === 'direct' && activeDirectUser) {
-            videoCallState.startCall(activeDirectUser, profile);
+            videoCallState.startCall(activeDirectUser, profile, isVideo);
         } else {
-            alert('Tính năng gọi video hiện chỉ hỗ trợ cho cuộc trò chuyện 1-1.');
+            alert('Tính năng gọi điện hiện chỉ hỗ trợ cho cuộc trò chuyện 1-1.');
         }
     };
 
@@ -450,10 +450,10 @@ export default function ChatPage() {
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <IconButton title="Start video call" onClick={handleStartVideoCall}>
+                                    <IconButton title="Start video call" onClick={() => handleStartVideoCall(true)}>
                                         <Video size={18} />
                                     </IconButton>
-                                    <IconButton title="Start voice call">
+                                    <IconButton title="Start voice call" onClick={() => handleStartVideoCall(false)}>
                                         <Phone size={18} />
                                     </IconButton>
                                     <IconButton title="Search in conversation">

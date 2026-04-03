@@ -1066,6 +1066,7 @@ export function ZolaAppProvider({ children }) {
         selectConversation,
         sendFriendRequest,
         setMessageInput,
+        setProfile,
         setSidebarError,
         setTheme,
         sidebarError,

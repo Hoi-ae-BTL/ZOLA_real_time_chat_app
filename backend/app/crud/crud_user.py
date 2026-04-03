@@ -79,3 +79,14 @@ async def search_users(
     )
     result = await db.execute(stmt)
     return result.scalars().all()
+
+
+async def update_user(db: AsyncSession, *, db_obj: User, obj_in: dict) -> User:
+    for field, value in obj_in.items():
+        if hasattr(db_obj, field):
+            setattr(db_obj, field, value)
+            
+    db.add(db_obj)
+    await db.commit()
+    await db.refresh(db_obj)
+    return db_obj
