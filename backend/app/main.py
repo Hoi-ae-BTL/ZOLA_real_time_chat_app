@@ -30,7 +30,7 @@ app = FastAPI(
 origins = [
     "http://localhost:3000",  # Nếu Thế code bằng React/NextJS (mặc định)
     "http://localhost:5173",  # Nếu Thế khởi tạo bằng Vite
-    "*"                       # TẠM THỜI mở cho tất cả (Lưu ý: Lúc chấm đồ án/đưa lên mạng thật thì nên xóa dòng này)
+                          # TẠM THỜI mở cho tất cả (Lưu ý: Lúc chấm đồ án/đưa lên mạng thật thì nên xóa dòng này)
 ]
 
 app.add_middleware(

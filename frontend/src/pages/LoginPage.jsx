@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginAPI } from '../api/auth.api';
-import { User, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { User, Lock, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export default function LoginPage() {
@@ -27,11 +27,15 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-[100dvh] bg-[var(--app-bg)] flex items-center justify-center p-6 font-sans antialiased text-[var(--text-primary)]">
-            <div className="bg-[var(--card-bg)] p-10 rounded-[32px] shadow-[0_12px_40px_rgba(0,0,0,0.08)] w-full max-w-[440px] border border-[var(--divider)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="min-h-[100dvh] overflow-y-auto bg-[var(--app-bg)] flex p-6 font-sans antialiased text-[var(--text-primary)]">
+            <div className="m-auto bg-[var(--card-bg)] p-10 rounded-[32px] shadow-[0_12px_40px_rgba(0,0,0,0.08)] w-full max-w-[440px] border border-[var(--divider)] animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="text-center mb-10">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-[var(--accent-faint)] rounded-[20px] mb-5 shadow-inner">
-                        <ShieldCheck size={32} className="text-[var(--accent)]" />
+                    <div className="inline-flex items-center justify-center mb-5 relative">
+                        <div className="w-16 h-16 bg-gradient-to-br from-[#0068ff] to-[#0047b3] rounded-2xl shadow-[0_10px_24px_rgba(0,104,255,0.35)] flex items-center justify-center overflow-hidden relative">
+                            {/* Accent highlight curve */}
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-white opacity-10 rounded-full blur-[8px] transform translate-x-4 -translate-y-6"></div>
+                            <span className="text-4xl font-black text-white tracking-tighter drop-shadow-md">Z</span>
+                        </div>
                     </div>
                     <h2 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">Chào mừng trở lại</h2>
                     <p className="text-[var(--text-muted)] mt-2 font-medium">Đăng nhập ZOLA để tiếp tục trò chuyện</p>

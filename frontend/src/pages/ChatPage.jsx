@@ -569,16 +569,39 @@ export default function ChatPage() {
                             <div className="rounded-[24px] bg-[var(--input-bg)] px-3 py-3">
                                 <div className="flex items-end gap-2">
                                     <IconButton
-                                        onClick={() => fileInputRef.current?.click()}
-                                        title="Upload attachment"
+                                        onClick={() => {
+                                            if (fileInputRef.current) {
+                                                fileInputRef.current.accept = '*/*';
+                                                fileInputRef.current.click();
+                                            }
+                                        }}
+                                        title="Upload anything"
                                         disabled={isUploading}
                                     >
                                         {isUploading ? <LoaderCircle size={18} className="animate-spin" /> : <SquarePlus size={18} />}
                                     </IconButton>
-                                    <IconButton onClick={() => fileInputRef.current?.click()} title="Upload image">
+                                    <IconButton 
+                                        onClick={() => {
+                                            if (fileInputRef.current) {
+                                                fileInputRef.current.accept = 'image/*,video/*';
+                                                fileInputRef.current.click();
+                                            }
+                                        }} 
+                                        title="Upload image or video"
+                                        disabled={isUploading}
+                                    >
                                         <ImageIcon size={18} />
                                     </IconButton>
-                                    <IconButton onClick={() => fileInputRef.current?.click()} title="Attach file">
+                                    <IconButton 
+                                        onClick={() => {
+                                            if (fileInputRef.current) {
+                                                fileInputRef.current.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z';
+                                                fileInputRef.current.click();
+                                            }
+                                        }} 
+                                        title="Attach document"
+                                        disabled={isUploading}
+                                    >
                                         <Paperclip size={18} />
                                     </IconButton>
 
