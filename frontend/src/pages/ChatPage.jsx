@@ -40,29 +40,36 @@ const IconButton = ({ children, onClick, title, disabled = false }) => (
     </button>
 );
 
-const Attachment = ({ message }) => (
-    <div className="space-y-3">
-        {message.content ? <p className="whitespace-pre-wrap break-words">{message.content}</p> : null}
-        {message.img_url ? (
-            <img
-                src={resolveAssetUrl(message.img_url)}
-                alt="attachment"
-                className="max-h-[320px] w-full rounded-[18px] object-cover"
-            />
-        ) : null}
-        {message.file_url ? (
-            <a
-                href={resolveAssetUrl(message.file_url)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-3 rounded-2xl bg-[var(--input-bg)] px-4 py-3 text-sm text-inherit"
-            >
-                <Paperclip size={16} />
-                <span>{message.file_name || 'Attachment'}</span>
-            </a>
-        ) : null}
-    </div>
-);
+// File: src/pages/ChatPage.jsx
+
+const Attachment = ({ message }) => {
+    return (
+        <div className="space-y-3">
+            {message.content && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
+
+            {/* Sửa lại phần hiển thị ảnh để an toàn hơn */}
+            {message.img_url && (
+                <div className="grid gap-2">
+                    {/* Nếu img_url là chuỗi đơn thì hiện 1 ảnh, nếu là mảng thì loop qua */}
+                    {Array.isArray(message.img_url) ? (
+                        message.img_url.map((url, i) => (
+                            <img key={i} src={resolveAssetUrl(url)} alt="attachment" className="max-h-[320px] w-full rounded-[18px] object-cover" />
+                        ))
+                    ) : (
+                        <img src={resolveAssetUrl(message.img_url)} alt="attachment" className="max-h-[320px] w-full rounded-[18px] object-cover" />
+                    )}
+                </div>
+            )}
+
+            {message.file_url && (
+                <a href={resolveAssetUrl(message.file_url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 rounded-2xl bg-[var(--input-bg)] px-4 py-3 text-sm text-inherit">
+                    <Paperclip size={16} />
+                    <span>{message.file_name || 'Attachment'}</span>
+                </a>
+            )}
+        </div>
+    );
+};
 
 const formatDayDivider = (value) => {
     if (!value) {
